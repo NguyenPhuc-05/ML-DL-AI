@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import joblib
 
@@ -31,10 +32,6 @@ species = {
     2: "virginica",
 }
 
-@app.get("/")
-def home():
-    return {"message": "Iris SVM API is running"}
-
 @app.get("/health")
 def health():
     return {"status": "healthy"}
@@ -52,3 +49,6 @@ def predict(data: IrisInput):
         "class_id": prediction,
         "prediction": species[prediction],
     }
+
+# Lệnh này phải để ở cuối cùng: Gắn toàn bộ thư mục frontend lên đường dẫn gốc
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
