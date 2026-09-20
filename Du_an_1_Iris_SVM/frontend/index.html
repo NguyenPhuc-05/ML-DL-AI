@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iris AI Predictor</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Mesh Gradient Background -->
+    <div class="mesh-bg">
+        <div class="color-blob blob-1"></div>
+        <div class="color-blob blob-2"></div>
+        <div class="color-blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="avatar-container">
+                <img src="assets/avatar.jpg" alt="Developer Avatar" class="avatar">
+                <div class="online-indicator"></div>
+            </div>
+            <div class="title-container">
+                <h1>Iris AI Predictor</h1>
+                <p>Powered by SVM & FastAPI</p>
+            </div>
+        </header>
+
+        <!-- Main Content (Glassmorphism Card) -->
+        <main class="main-card glass-panel">
+            <div class="card-header">
+                <h2>Flower Characteristics</h2>
+                <p>Enter the measurements to let the AI predict the Iris species.</p>
+            </div>
+
+            <form id="prediction-form">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label for="sepal-length">Sepal Length (cm)</label>
+                        <input type="number" id="sepal-length" name="sepal_length" step="0.1" min="0" value="5.1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="sepal-width">Sepal Width (cm)</label>
+                        <input type="number" id="sepal-width" name="sepal_width" step="0.1" min="0" value="3.5" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="petal-length">Petal Length (cm)</label>
+                        <input type="number" id="petal-length" name="petal_length" step="0.1" min="0" value="1.4" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="petal-width">Petal Width (cm)</label>
+                        <input type="number" id="petal-width" name="petal_width" step="0.1" min="0" value="0.2" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submit-btn">
+                    <span class="btn-text">Predict Species</span>
+                    <span class="loader" id="loader"></span>
+                </button>
+            </form>
+
+            <div class="result-container" id="result-container">
+                <div class="result-box" id="result-box">
+                    <h3 class="result-title">Prediction Result</h3>
+                    <div class="species-badge" id="species-badge">Virginica</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
