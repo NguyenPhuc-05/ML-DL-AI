@@ -7,3 +7,10 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+
+  - type: web
+    name: iris-svm-frontend
+    plan: free
+    rootDir: "Du_an_1_Iris_SVM/frontend"
+    env: static
+    staticPublishPath: "."
