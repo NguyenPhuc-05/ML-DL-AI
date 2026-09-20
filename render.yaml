@@ -1,6 +1,7 @@
-﻿services:
+services:
   - type: web
     name: iris-svm-api
+    plan: free
     rootDir: "Du_an_1_Iris_SVM"
     runtime: python
     buildCommand: pip install -r requirements.txt
