@@ -19,7 +19,7 @@ def main() -> None:
     X = iris.data
     y = iris.target
 
-    model = SVC(kernel="linear")
+    model = SVC(kernel="rbf", probability=True)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     scores = cross_val_score(model, X, y, cv=cv, scoring="accuracy")
 
@@ -28,13 +28,13 @@ def main() -> None:
     joblib.dump(model, MODEL_PATH)
 
     metadata = {
-        "model_name": "iris-svm-linear",
+        "model_name": "iris-svm-rbf",
         "model_version": "1.0.0",
         "feature_names": list(iris.feature_names),
         "class_mapping": {
             str(index): name for index, name in enumerate(iris.target_names)
         },
-        "kernel": "linear",
+        "kernel": "rbf",
         "cv_accuracy_mean": float(scores.mean()),
         "cv_accuracy_std": float(scores.std()),
         "sklearn_version": sklearn.__version__,

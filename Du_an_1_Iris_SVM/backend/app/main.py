@@ -53,6 +53,7 @@ class IrisInput(BaseModel):
 class IrisPrediction(BaseModel):
     class_id: int
     prediction: str
+    probability: float
     model_version: str
 
 
@@ -93,9 +94,12 @@ def predict(data: IrisInput):
     if label is None:
         raise HTTPException(status_code=500, detail="Model returned an unknown class")
 
+    probability = float(model.predict_proba(features)[0][prediction])
+
     return IrisPrediction(
         class_id=prediction,
         prediction=label,
+        probability=probability,
         model_version=metadata["model_version"],
     )
 

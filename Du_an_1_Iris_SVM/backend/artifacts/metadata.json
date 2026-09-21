@@ -1,5 +1,5 @@
 {
-  "model_name": "iris-svm-linear",
+  "model_name": "iris-svm-rbf",
   "model_version": "1.0.0",
   "feature_names": [
     "sepal length (cm)",
@@ -12,8 +12,9 @@
     "1": "versicolor",
     "2": "virginica"
   },
-  "kernel": "linear",
+  "kernel": "rbf",
+  "cv_accuracy_mean": 0.9666666666666668,
+  "cv_accuracy_std": 0.029814239699997188,
   "sklearn_version": "1.9.1",
   "warning": "Educational use only. Predictions are demonstrations, not scientific identification."
 }
-

@@ -285,8 +285,8 @@ async function handlePredict() {
         currentPrediction = species;
 
         highlightCards(species);
-        showBotanical(species);
-        saveHistory(vals, species);
+        showBotanical(species, data.probability);
+        saveHistory(vals, species, data.probability);
         
         // Cập nhật scatter ẩn
         drawScatter();
@@ -314,7 +314,7 @@ function highlightCards(species) {
     });
 }
 
-function showBotanical(species) {
+function showBotanical(species, prob) {
     const sec = document.getElementById('botanical-panel');
     const d = BOTANICAL[species];
     if (!d) return;
@@ -333,6 +333,14 @@ function showBotanical(species) {
     const badge = document.getElementById('bot-badge');
     badge.textContent = d.badge;
     badge.style.backgroundColor = badgeColors[species];
+
+    const probBadge = document.getElementById('bot-prob');
+    if (prob !== undefined) {
+        probBadge.textContent = `🎯 Độ tin cậy: ${(prob * 100).toFixed(1)}%`;
+        probBadge.style.display = 'inline-block';
+    } else {
+        probBadge.style.display = 'none';
+    }
     
     document.getElementById('bot-kingdom').textContent = d.kingdom;
     document.getElementById('bot-phylum').textContent = d.phylum;
@@ -605,12 +613,13 @@ function getHistory() {
     try { return JSON.parse(localStorage.getItem('iris-history-v2') || '[]'); } catch { return []; }
 }
 
-function saveHistory(vals, species) {
+function saveHistory(vals, species, prob) {
     const history = getHistory();
     history.unshift({
         sl: vals['sepal-length'], sw: vals['sepal-width'],
         pl: vals['petal-length'], pw: vals['petal-width'],
         species,
+        prob: prob ? (prob * 100).toFixed(1) + '%' : '',
         time: new Date().toLocaleTimeString('vi-VN')
     });
     if (history.length > 15) history.pop(); // Keep 15
@@ -642,7 +651,7 @@ function renderHistory() {
         <tr data-idx="${i}">
             <td>${i + 1}</td>
             <td>${h.sl}</td><td>${h.sw}</td><td>${h.pl}</td><td>${h.pw}</td>
-            <td><span style="color:${badgeColors[h.species] || '#888'};font-weight:700;text-transform:capitalize">${h.species}</span></td>
+            <td><span style="color:${badgeColors[h.species] || '#888'};font-weight:700;text-transform:capitalize">${h.species}</span> <span style="font-size: 0.75rem; color: var(--text-sec);">${h.prob}</span></td>
             <td>${h.time}</td>
         </tr>
     `).join('');
