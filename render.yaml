@@ -1,4 +1,5 @@
 services:
+  # --- DỰ ÁN 1: IRIS SVM ---
   - type: web
     name: iris-svm-api
     plan: free
@@ -11,6 +12,24 @@ services:
   - type: web
     name: iris-svm-frontend
     rootDir: "Du_an_1_Iris_SVM/frontend"
+    env: static
+    buildCommand: "echo 'No build needed'"
+    staticPublishPath: "."
+
+  # --- DỰ ÁN 2: BREAST CANCER SVM ---
+  - type: web
+    name: breast-cancer-svm-api
+    plan: free
+    rootDir: "Du_an_2_Breast_Cancer/backend"
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+
+  - type: web
+    name: breast-cancer-svm-frontend
+    rootDir: "Du_an_2_Breast_Cancer/frontend"
     env: static
     buildCommand: "echo 'No build needed'"
     staticPublishPath: "."
