@@ -1,0 +1,19 @@
+{
+  "model_name": "iris-svm-linear",
+  "model_version": "1.0.0",
+  "feature_names": [
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)"
+  ],
+  "class_mapping": {
+    "0": "setosa",
+    "1": "versicolor",
+    "2": "virginica"
+  },
+  "kernel": "linear",
+  "sklearn_version": "1.9.1",
+  "warning": "Educational use only. Predictions are demonstrations, not scientific identification."
+}
+

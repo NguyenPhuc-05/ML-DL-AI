@@ -168,8 +168,18 @@ body {
     background-color: var(--success-text);
 }
 
+.status-indicator.warming {
+    background-color: #f59e0b;
+    animation: pulse 1.4s ease-in-out infinite;
+}
+
 .status-indicator.offline {
     background-color: var(--error-text);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
 }
 
 .title-container h1 {

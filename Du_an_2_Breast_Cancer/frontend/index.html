@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống Chẩn đoán Ung thư vú bằng AI</title>
-    <meta name="description" content="Mô hình học máy SVM phân tích 30 chỉ số tế bào để hỗ trợ chẩn đoán u ác tính/lành tính.">
+    <title>Minh họa phân loại Breast Cancer bằng SVM</title>
+    <meta name="description" content="Ứng dụng học thuật minh họa mô hình SVM phân loại 30 đặc trưng của bộ dữ liệu Breast Cancer Wisconsin.">
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,8 +25,8 @@
                 </svg>
             </div>
             <div class="title-container">
-                <h1>Hệ thống Chẩn đoán Ung thư Vú (SVM)</h1>
-                <p>Phân tích 30 chỉ số tế bào khối u - Hỗ trợ quyết định y khoa</p>
+                <h1>Minh họa Phân loại Breast Cancer (SVM)</h1>
+                <p>Đồ án học máy với 30 đặc trưng - Không dùng để chẩn đoán y tế</p>
             </div>
             <div class="status-badge" id="api-status">
                 <span class="indicator"></span>
@@ -103,7 +103,7 @@
                     </div>
                     
                     <button type="submit" class="submit-btn" id="submit-btn" hidden>
-                        <span class="btn-text">🔬 Phân tích dữ liệu &amp; Chẩn đoán</span>
+                        <span class="btn-text">🔬 Phân tích và phân loại minh họa</span>
                         <span class="loader" id="loader" role="status" aria-label="Đang phân tích">
                             <span class="sr-only">Đang phân tích...</span>
                         </span>
@@ -114,14 +114,14 @@
             <!-- Khu vực kết quả -->
             <section id="result-container" class="result-container" aria-live="polite" aria-atomic="true" hidden>
                 <div class="result-header">
-                    <h3>Kết quả Khảo sát AI</h3>
+                    <h3>Kết quả phân loại của mô hình</h3>
                     <div class="result-badge" id="result-badge"></div>
                 </div>
                 
                 <div class="result-body">
                     <div class="prob-section">
                         <div class="prob-header">
-                            <span>Khả năng Lành tính (Benign)</span>
+                            <span>Xác suất theo mô hình: Benign</span>
                             <span id="prob-benign-text">--%</span>
                         </div>
                         <div class="prob-bar-bg">
@@ -131,7 +131,7 @@
 
                     <div class="prob-section mt-4">
                         <div class="prob-header">
-                            <span>Khả năng Ác tính (Malignant)</span>
+                            <span>Xác suất theo mô hình: Malignant</span>
                             <span id="prob-malignant-text">--%</span>
                         </div>
                         <div class="prob-bar-bg">
@@ -140,7 +140,7 @@
                     </div>
 
                     <div class="advice-box" id="advice-box">
-                        <h4 id="advice-title">Khuyến nghị:</h4>
+                        <h4 id="advice-title">Diễn giải học thuật:</h4>
                         <p id="advice-content"></p>
                     </div>
                     
