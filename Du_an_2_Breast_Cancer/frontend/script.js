@@ -5,7 +5,7 @@
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:8000' 
-    : 'https://breast-cancer-svm-api.onrender.com'; // Sẽ cập nhật sau khi có link render
+    : 'https://breast-cancer-svm-api.onrender.com';
 
 // --- 1. DỮ LIỆU ĐẶC TRƯNG (30 Features) ---
 const baseFeatures = [
