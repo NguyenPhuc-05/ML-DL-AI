@@ -4,12 +4,9 @@
    ======================================== */
 
 // --- Cấu hình API ---
-const API_BASE_URL =
-    window.location.hostname === 'localhost'
-        ? 'http://localhost:8000'
-        : window.location.protocol === 'file:'
-            ? 'https://iris-svm-api-yfd4.onrender.com'
-            : 'https://iris-svm-api-yfd4.onrender.com';
+const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://localhost:8000'
+    : 'https://iris-svm-api-yfd4.onrender.com';
 
 const API_PREDICT_URL = `${API_BASE_URL}/predict`;
 const API_HEALTH_URL = `${API_BASE_URL}/health`;
@@ -27,6 +24,15 @@ const statusText = document.getElementById('status-text');
 
 // Cờ chống gửi request trùng
 let isRequesting = false;
+
+const sleep = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+function setApiStatus(status, message) {
+    statusIndicator.classList.remove('online', 'offline', 'warming');
+    statusIndicator.classList.add(status);
+    statusIndicator.title = message;
+    statusText.textContent = message;
+}
 
 // --- Màu theo loài hoa (dịu) ---
 const speciesColors = {
@@ -214,24 +220,29 @@ function displayResult(speciesName) {
 // Sự kiện chính
 // ==========================================
 
-// --- Health check khi trang mở ---
+// --- Health check có retry cho Render free tier ---
 (async function checkHealth() {
-    try {
-        const res = await fetch(API_HEALTH_URL, { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-            statusIndicator.classList.add('online');
-            statusIndicator.classList.remove('offline');
-            statusIndicator.title = 'API sẵn sàng';
-            statusText.textContent = 'API sẵn sàng';
-        } else {
-            throw new Error('Not OK');
+    setApiStatus('warming', 'Máy chủ đang khởi động');
+
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+        try {
+            const res = await fetch(API_HEALTH_URL, {
+                signal: AbortSignal.timeout(15000)
+            });
+            if (res.ok) {
+                setApiStatus('online', 'API sẵn sàng');
+                return;
+            }
+        } catch {
+            // Render free tier có thể cần thêm thời gian sau khi ngủ.
         }
-    } catch {
-        statusIndicator.classList.add('offline');
-        statusIndicator.classList.remove('online');
-        statusIndicator.title = 'API tạm thời không khả dụng';
-        statusText.textContent = 'API tạm thời không khả dụng';
+
+        if (attempt < 4) {
+            await sleep(3000 * attempt);
+        }
     }
+
+    setApiStatus('offline', 'API chưa phản hồi; bạn vẫn có thể thử dự đoán');
 })();
 
 // --- Preset buttons ---
@@ -311,9 +322,7 @@ form.addEventListener('submit', async (e) => {
         }
 
         // Cập nhật trạng thái API
-        statusIndicator.classList.add('online');
-        statusIndicator.classList.remove('offline');
-        statusIndicator.title = 'API sẵn sàng';
+        setApiStatus('online', 'API sẵn sàng');
 
         // Ẩn lỗi, hiển thị kết quả
         hideMessage();
@@ -327,8 +336,7 @@ form.addEventListener('submit', async (e) => {
         let msg;
         if (error instanceof TypeError && error.message === 'Failed to fetch') {
             msg = 'Không thể kết nối tới API. Vui lòng kiểm tra kết nối mạng hoặc thử lại sau.';
-            statusIndicator.classList.add('offline');
-            statusIndicator.classList.remove('online');
+            setApiStatus('offline', 'Không thể kết nối API');
         } else {
             msg = error.message || 'Đã xảy ra lỗi không xác định.';
         }

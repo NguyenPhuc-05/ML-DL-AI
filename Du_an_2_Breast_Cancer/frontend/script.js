@@ -3,9 +3,37 @@
 // Xử lý UI 3 Tabs, gọi API, hiển thị kết quả y tế
 // ========================================
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000' 
+const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://localhost:8000'
     : 'https://breast-cancer-svm-api.onrender.com';
+
+const sleep = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+function setApiStatus(status, message) {
+    const badge = document.getElementById('api-status');
+    const text = badge.querySelector('.status-text');
+    badge.classList.remove('online', 'offline', 'warming');
+    badge.classList.add(status);
+    text.textContent = message;
+}
+
+function formatApiError(detail, fallback) {
+    if (!detail) return fallback;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+        return detail.map(item => item.msg || JSON.stringify(item)).join('; ');
+    }
+    if (typeof detail === 'object') {
+        const missing = detail.missing?.length
+            ? `Thiếu: ${detail.missing.join(', ')}`
+            : '';
+        const extra = detail.extra?.length
+            ? `Thừa: ${detail.extra.join(', ')}`
+            : '';
+        return [missing, extra].filter(Boolean).join('. ') || JSON.stringify(detail);
+    }
+    return fallback;
+}
 
 // --- 1. DỮ LIỆU ĐẶC TRƯNG (30 Features) ---
 const baseFeatures = [
@@ -155,22 +183,27 @@ function setupPresets() {
 // --- 6. GỌI API ---
 
 async function checkApiHealth() {
-    const badge = document.getElementById('api-status');
-    const text = badge.querySelector('.status-text');
-    try {
-        const res = await fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-            badge.classList.remove('offline');
-            badge.classList.add('online');
-            text.textContent = 'API Sẵn sàng';
-        } else {
-            throw new Error();
+    setApiStatus('warming', 'Máy chủ đang khởi động...');
+
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/health`, {
+                signal: AbortSignal.timeout(15000)
+            });
+            if (res.ok) {
+                setApiStatus('online', 'API sẵn sàng');
+                return;
+            }
+        } catch {
+            // Render free tier có thể cần thêm thời gian sau khi ngủ.
         }
-    } catch (err) {
-        badge.classList.remove('online');
-        badge.classList.add('offline');
-        text.textContent = 'API Đang bảo trì';
+
+        if (attempt < 4) {
+            await sleep(3000 * attempt);
+        }
     }
+
+    setApiStatus('offline', 'API chưa phản hồi');
 }
 
 async function handlePredict(e) {
@@ -213,11 +246,21 @@ async function handlePredict(e) {
         });
 
         if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.detail || `Lỗi API (${res.status})`);
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(formatApiError(errData.detail, `Lỗi API (${res.status})`));
         }
 
         const data = await res.json();
+        const probabilitySum = data.probability_malignant + data.probability_benign;
+        if (
+            !['malignant', 'benign'].includes(data.predicted_label) ||
+            !Number.isFinite(probabilitySum) ||
+            Math.abs(probabilitySum - 1) > 0.001
+        ) {
+            throw new Error('Phản hồi API không đúng cấu trúc mong đợi.');
+        }
+
+        setApiStatus('online', 'API sẵn sàng');
         showResult(data);
 
     } catch (err) {
@@ -247,19 +290,19 @@ function showResult(data) {
     document.getElementById('prob-benign-text').textContent = `${pBenign}%`;
     document.getElementById('prob-benign-bar').style.width = `${pBenign}%`;
     
-    // Lời khuyên y tế
+    // Diễn giải học thuật, không đưa ra chỉ định y tế
     const adviceBox = document.getElementById('advice-box');
     const adviceTitle = document.getElementById('advice-title');
     const adviceContent = document.getElementById('advice-content');
     
     if (data.predicted_label === 'malignant') {
         adviceBox.className = 'advice-box malignant-advice';
-        adviceTitle.textContent = 'Cảnh báo mức độ CAO (High Risk):';
-        adviceContent.innerHTML = 'Mô hình AI dự đoán mẫu tế bào này có đặc điểm của <strong>khối u Ác tính</strong>. Đề nghị bệnh nhân thực hiện ngay sinh thiết (biopsy) và tham vấn bác sĩ chuyên khoa Ung bướu.';
+        adviceTitle.textContent = 'Diễn giải học thuật: nhóm Malignant';
+        adviceContent.innerHTML = 'Theo mô hình và bộ dữ liệu minh họa, mẫu này gần với nhóm <strong>malignant</strong>. Kết quả không phải chẩn đoán và không được dùng để quyết định y khoa. Khi có lo ngại sức khỏe, hãy trao đổi trực tiếp với cơ sở y tế có chuyên môn.';
     } else {
         adviceBox.className = 'advice-box benign-advice';
-        adviceTitle.textContent = 'Trạng thái ỔN ĐỊNH (Low Risk):';
-        adviceContent.innerHTML = 'Mô hình AI dự đoán mẫu tế bào này có khả năng là <strong>khối u Lành tính</strong>. Tuy nhiên, bệnh nhân vẫn cần theo dõi định kỳ theo chỉ định của bác sĩ.';
+        adviceTitle.textContent = 'Diễn giải học thuật: nhóm Benign';
+        adviceContent.innerHTML = 'Theo mô hình và bộ dữ liệu minh họa, mẫu này gần với nhóm <strong>benign</strong>. Kết quả không xác nhận tình trạng sức khỏe và không thay thế đánh giá của chuyên gia y tế.';
     }
     
     // Version

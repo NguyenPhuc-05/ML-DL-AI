@@ -122,7 +122,17 @@ body {
 }
 
 .status-badge.online .indicator { background-color: #4ade80; box-shadow: 0 0 8px #4ade80; }
+.status-badge.warming .indicator {
+    background-color: #fbbf24;
+    box-shadow: 0 0 8px #fbbf24;
+    animation: pulse 1.4s ease-in-out infinite;
+}
 .status-badge.offline .indicator { background-color: #f87171; box-shadow: 0 0 8px #f87171; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
 
 /* Main Card */
 .glass-panel {
