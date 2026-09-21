@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iris AI Explorer — Khám phá hoa Iris bằng Trí tuệ Nhân tạo</title>
-    <meta name="description" content="Ứng dụng tương tác khám phá bộ dữ liệu Iris kinh điển bằng thuật toán SVM. Trực quan hóa dữ liệu, dự đoán real-time, và câu chuyện khoa học.">
+    <meta name="description" content="Ứng dụng tương tác khám phá bộ dữ liệu Iris kinh điển bằng thuật toán SVM.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,278 +19,390 @@
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
-        <div class="blob blob-4"></div>
     </div>
 
-    <div class="app-container">
-        <!-- ===== HEADER ===== -->
-        <header class="app-header glass-panel">
-            <div class="header-left">
+    <!-- Falling Petals Container -->
+    <div class="petals-container" id="petals-container" aria-hidden="true"></div>
+
+    <div class="app-shell">
+        <!-- ===== TOP HEADER ===== -->
+        <header class="top-header glass-panel">
+            <div class="header-brand">
                 <span class="logo-icon">🌸</span>
                 <div>
                     <h1>Iris AI Explorer</h1>
                     <p class="subtitle">Khám phá & Dự đoán loài hoa bằng SVM</p>
                 </div>
             </div>
-            <div class="header-right">
-                <div class="api-status" id="api-status" title="Đang kiểm tra API...">
+            <div class="header-actions">
+                <div class="api-status" id="api-status">
                     <span class="status-dot"></span>
-                    <span class="status-label" id="status-label">Kết nối...</span>
+                    <span id="status-label">Kết nối...</span>
                 </div>
-                <button class="theme-toggle glass-btn" id="theme-toggle" aria-label="Chuyển đổi chế độ sáng/tối" title="Chuyển đổi sáng/tối">
-                    <span class="theme-icon" id="theme-icon">🌙</span>
+                <button class="icon-btn" id="theme-toggle" aria-label="Chuyển đổi sáng/tối" title="Chuyển đổi sáng/tối">
+                    <span id="theme-icon">🌙</span>
                 </button>
             </div>
         </header>
 
-        <!-- ===== PREDICTION SECTION ===== -->
-        <section class="predict-section" id="predict-section">
-            <div class="predict-grid">
-                <!-- Left: Input Controls -->
-                <div class="glass-panel input-panel">
-                    <h2 class="section-title">🎛️ Thông số đo lường</h2>
-                    <p class="section-desc">Điều chỉnh thanh trượt hoặc nhập số để thay đổi thông số.</p>
+        <!-- ===== TAB NAVIGATION ===== -->
+        <nav class="tab-nav glass-panel" id="tab-nav" role="tablist">
+            <button class="tab-btn active" role="tab" data-tab="predict" aria-selected="true">🔬 Phân tích</button>
+            <button class="tab-btn" role="tab" data-tab="data">📈 Dữ liệu</button>
+            <button class="tab-btn" role="tab" data-tab="science">📜 Câu chuyện</button>
+            <button class="tab-btn" role="tab" data-tab="svm">🧠 SVM</button>
+            <button class="tab-btn" role="tab" data-tab="history">📋 Lịch sử</button>
+        </nav>
 
-                    <div class="slider-group" id="slider-sepal-length">
-                        <div class="slider-header">
-                            <label for="inp-sepal-length">Chiều dài đài hoa (Sepal Length)</label>
-                            <div class="slider-value-box">
-                                <input type="number" id="inp-sepal-length" class="value-input" step="0.1" min="4.0" max="8.0" value="5.1"> <span class="unit">cm</span>
+        <!-- ===== TAB PANELS ===== -->
+        <main class="tab-panels">
+
+            <!-- ── TAB 1: PHÂN TÍCH ── -->
+            <section class="tab-panel active" id="panel-predict" role="tabpanel">
+                <div class="predict-grid">
+                    <!-- Left: Input Controls -->
+                    <div class="glass-panel input-panel">
+                        <h2 class="sec-title">🎛️ Thông số đo lường</h2>
+                        <p class="sec-desc">Kéo thanh trượt hoặc nhập số.</p>
+
+                        <div class="slider-group" id="sg-sepal-length">
+                            <div class="slider-header">
+                                <label for="inp-sepal-length">Chiều dài đài hoa</label>
+                                <div class="val-box"><input type="number" id="inp-sepal-length" class="val-inp" step="0.1" min="4.0" max="8.0" value="5.1"><span class="unit">cm</span></div>
+                            </div>
+                            <input type="range" id="rng-sepal-length" class="ios-slider" min="4.0" max="8.0" step="0.1" value="5.1">
+                            <div class="slider-range"><span>4.0</span><span>8.0</span></div>
+                        </div>
+                        <div class="slider-group" id="sg-sepal-width">
+                            <div class="slider-header">
+                                <label for="inp-sepal-width">Chiều rộng đài hoa</label>
+                                <div class="val-box"><input type="number" id="inp-sepal-width" class="val-inp" step="0.1" min="2.0" max="5.0" value="3.5"><span class="unit">cm</span></div>
+                            </div>
+                            <input type="range" id="rng-sepal-width" class="ios-slider" min="2.0" max="5.0" step="0.1" value="3.5">
+                            <div class="slider-range"><span>2.0</span><span>5.0</span></div>
+                        </div>
+                        <div class="slider-group" id="sg-petal-length">
+                            <div class="slider-header">
+                                <label for="inp-petal-length">Chiều dài cánh hoa</label>
+                                <div class="val-box"><input type="number" id="inp-petal-length" class="val-inp" step="0.1" min="1.0" max="7.0" value="1.4"><span class="unit">cm</span></div>
+                            </div>
+                            <input type="range" id="rng-petal-length" class="ios-slider" min="1.0" max="7.0" step="0.1" value="1.4">
+                            <div class="slider-range"><span>1.0</span><span>7.0</span></div>
+                        </div>
+                        <div class="slider-group" id="sg-petal-width">
+                            <div class="slider-header">
+                                <label for="inp-petal-width">Chiều rộng cánh hoa</label>
+                                <div class="val-box"><input type="number" id="inp-petal-width" class="val-inp" step="0.1" min="0.1" max="3.0" value="0.2"><span class="unit">cm</span></div>
+                            </div>
+                            <input type="range" id="rng-petal-width" class="ios-slider" min="0.1" max="3.0" step="0.1" value="0.2">
+                            <div class="slider-range"><span>0.1</span><span>3.0</span></div>
+                        </div>
+
+                        <div class="preset-bar">
+                            <span class="preset-label">Mẫu:</span>
+                            <button type="button" class="preset-btn ripple-btn" data-preset="setosa">🌸 Setosa</button>
+                            <button type="button" class="preset-btn ripple-btn" data-preset="versicolor">🌺 Versicolor</button>
+                            <button type="button" class="preset-btn ripple-btn" data-preset="virginica">💐 Virginica</button>
+                        </div>
+
+                        <button type="button" class="predict-btn ripple-btn" id="predict-btn">
+                            <span class="btn-text" id="btn-text">🔬 Phân tích & Dự đoán</span>
+                            <span class="loader" id="loader"></span>
+                        </button>
+                        <div id="error-msg" class="error-toast" role="alert" hidden></div>
+                    </div>
+
+                    <!-- Right: Radar -->
+                    <div class="glass-panel chart-panel">
+                        <h2 class="sec-title">📊 Biểu đồ Radar</h2>
+                        <canvas id="radar-canvas" width="320" height="320"></canvas>
+                    </div>
+                </div>
+
+                <!-- Result: Species Cards + Botanical -->
+                <div class="species-row" id="species-row">
+                    <div class="glass-panel species-card magnetic-card" data-species="setosa" id="card-setosa">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg" alt="Iris Setosa" class="sp-img" loading="lazy">
+                        <h3>🌸 Setosa</h3>
+                        <p class="sp-trait">Cánh hoa rất ngắn & nhỏ</p>
+                    </div>
+                    <div class="glass-panel species-card magnetic-card" data-species="versicolor" id="card-versicolor">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg" alt="Iris Versicolor" class="sp-img" loading="lazy">
+                        <h3>🌺 Versicolor</h3>
+                        <p class="sp-trait">Kích thước trung bình</p>
+                    </div>
+                    <div class="glass-panel species-card magnetic-card" data-species="virginica" id="card-virginica">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg" alt="Iris Virginica" class="sp-img" loading="lazy">
+                        <h3>💐 Virginica</h3>
+                        <p class="sp-trait">Kích thước lớn nhất</p>
+                    </div>
+                </div>
+
+                <!-- Botanical (hidden until prediction) -->
+                <div class="glass-panel botanical" id="botanical-panel" hidden>
+                    <div class="bot-grid">
+                        <img src="" alt="" id="bot-img" class="bot-image" loading="lazy">
+                        <div class="bot-info">
+                            <h3 id="bot-name" class="bot-name"></h3>
+                            <span class="bot-badge" id="bot-badge"></span>
+                            <table class="bot-table">
+                                <tr><td>Giới</td><td id="bot-kingdom"></td></tr>
+                                <tr><td>Ngành</td><td id="bot-phylum"></td></tr>
+                                <tr><td>Lớp</td><td id="bot-class"></td></tr>
+                                <tr><td>Bộ</td><td id="bot-order"></td></tr>
+                                <tr><td>Họ</td><td id="bot-family"></td></tr>
+                                <tr><td>Chi</td><td id="bot-genus"></td></tr>
+                                <tr><td>Loài</td><td id="bot-species"></td></tr>
+                            </table>
+                            <p id="bot-desc" class="bot-desc"></p>
+                            <p id="bot-habitat" class="bot-habitat"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── TAB 2: DỮ LIỆU ── -->
+            <section class="tab-panel" id="panel-data" role="tabpanel" hidden>
+                <div class="glass-panel">
+                    <h2 class="sec-title">📈 Bản đồ 150 mẫu Iris</h2>
+                    <p class="sec-desc">Trục X: Petal Length — Trục Y: Petal Width. Điểm ⭐ = Dữ liệu bạn nhập.</p>
+                    <div class="scatter-wrap"><canvas id="scatter-canvas" width="800" height="420"></canvas></div>
+                    <div class="legend">
+                        <span class="legend-item"><span class="ldot" style="background:#fb7185"></span> Setosa</span>
+                        <span class="legend-item"><span class="ldot" style="background:#a78bfa"></span> Versicolor</span>
+                        <span class="legend-item"><span class="ldot" style="background:#38bdf8"></span> Virginica</span>
+                        <span class="legend-item">⭐ Bạn</span>
+                    </div>
+                </div>
+                <div class="glass-panel dataset-info">
+                    <h2 class="sec-title">📋 Thông tin Dataset</h2>
+                    <div class="info-grid">
+                        <div class="info-card"><div class="info-num" data-count="150">0</div><div class="info-label">Mẫu dữ liệu</div></div>
+                        <div class="info-card"><div class="info-num" data-count="4">0</div><div class="info-label">Đặc trưng</div></div>
+                        <div class="info-card"><div class="info-num" data-count="3">0</div><div class="info-label">Loài hoa</div></div>
+                        <div class="info-card"><div class="info-num" data-count="1936">0</div><div class="info-label">Năm công bố</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── TAB 3: CÂU CHUYỆN KHOA HỌC ── -->
+            <section class="tab-panel" id="panel-science" role="tabpanel" hidden>
+                <div class="glass-panel timeline-header-panel">
+                    <h2 class="sec-title">📜 Hành trình 90 năm của Khoa học Dữ liệu</h2>
+                    <p class="sec-desc">Từ một luống hoa ở Canada đến thuật toán Machine Learning kinh điển toàn cầu.</p>
+                </div>
+                <div class="timeline">
+                    <div class="tl-item glass-panel">
+                        <div class="tl-dot"></div>
+                        <span class="tl-year">1936</span>
+                        <div class="tl-content">
+                            <div class="tl-img-wrap">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Youngronaldfisher2.JPG" alt="Ronald A. Fisher" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Ronald A. Fisher (1890–1962)</span>
+                            </div>
+                            <div>
+                                <h3>Ronald A. Fisher & Edgar Anderson</h3>
+                                <p><strong>Sir Ronald Aylmer Fisher</strong> (1890–1962) — được mệnh danh là "Cha đẻ của Thống kê hiện đại" — công bố bài báo lịch sử <em>"The use of multiple measurements in taxonomic problems"</em> trên tạp chí <em>Annals of Eugenics</em>.</p>
+                                <p>Trong bài báo này, Fisher sử dụng <strong>150 mẫu hoa Iris</strong> (50 mẫu mỗi loài: Setosa, Versicolor, Virginica) do nhà thực vật học <strong>Edgar Anderson</strong> thu thập tại <em>bán đảo Gaspé, Canada</em> để giới thiệu phương pháp <strong>Linear Discriminant Analysis (LDA)</strong> — một trong những thuật toán phân loại đầu tiên trong lịch sử nhân loại.</p>
+                                <p>Fisher đo đạc 4 đặc trưng hình thái: chiều dài đài hoa, chiều rộng đài hoa, chiều dài cánh hoa, chiều rộng cánh hoa. Bốn con số đơn giản này sẽ trở thành "Hello World" của mọi khóa học Machine Learning suốt 90 năm sau.</p>
                             </div>
                         </div>
-                        <input type="range" id="rng-sepal-length" class="styled-slider" min="4.0" max="8.0" step="0.1" value="5.1">
-                        <div class="slider-range"><span>4.0</span><span>8.0</span></div>
                     </div>
 
-                    <div class="slider-group" id="slider-sepal-width">
-                        <div class="slider-header">
-                            <label for="inp-sepal-width">Chiều rộng đài hoa (Sepal Width)</label>
-                            <div class="slider-value-box">
-                                <input type="number" id="inp-sepal-width" class="value-input" step="0.1" min="2.0" max="5.0" value="3.5"> <span class="unit">cm</span>
+                    <div class="tl-item glass-panel">
+                        <div class="tl-dot"></div>
+                        <span class="tl-year">1988</span>
+                        <div class="tl-content">
+                            <div class="tl-img-wrap">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg" alt="Iris Versicolor" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Iris versicolor — loài hoa kinh điển</span>
+                            </div>
+                            <div>
+                                <h3>UCI Machine Learning Repository</h3>
+                                <p>Bộ dữ liệu Iris chính thức được đưa vào kho lưu trữ <strong>UCI Machine Learning Repository</strong> tại Đại học California, Irvine — trở thành <strong>bộ dữ liệu benchmark tiêu chuẩn</strong> cho mọi thuật toán phân loại mới.</p>
+                                <p>Đến nay, bộ dữ liệu này đã được tải về và sử dụng <strong>hàng triệu lần</strong> bởi các nhà nghiên cứu, sinh viên và kỹ sư AI trên toàn thế giới. Mọi sinh viên Machine Learning đều bắt đầu hành trình của mình với 150 bông hoa này.</p>
                             </div>
                         </div>
-                        <input type="range" id="rng-sepal-width" class="styled-slider" min="2.0" max="5.0" step="0.1" value="3.5">
-                        <div class="slider-range"><span>2.0</span><span>5.0</span></div>
                     </div>
 
-                    <div class="slider-group" id="slider-petal-length">
-                        <div class="slider-header">
-                            <label for="inp-petal-length">Chiều dài cánh hoa (Petal Length)</label>
-                            <div class="slider-value-box">
-                                <input type="number" id="inp-petal-length" class="value-input" step="0.1" min="1.0" max="7.0" value="1.4"> <span class="unit">cm</span>
+                    <div class="tl-item glass-panel">
+                        <div class="tl-dot"></div>
+                        <span class="tl-year">1995</span>
+                        <div class="tl-content">
+                            <div class="tl-img-wrap">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/4/40/Vladimir_Vapnik.jpg" alt="Vladimir Vapnik" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Vladimir Vapnik (1936–)</span>
+                            </div>
+                            <div>
+                                <h3>Vladimir Vapnik & SVM ra đời</h3>
+                                <p><strong>Vladimir Naumovich Vapnik</strong> (sinh năm 1936, Liên Xô) — nhà toán học và khoa học máy tính lỗi lạc — cùng với <strong>Corinna Cortes</strong> công bố bài báo nền tảng về <strong>Support Vector Networks</strong> trên tạp chí <em>Machine Learning</em>.</p>
+                                <p>Ý tưởng cốt lõi: Thay vì chỉ tìm <em>một</em> đường phân tách, SVM tìm đường phân tách có <strong>khoảng cách lề (margin) lớn nhất</strong> tới các điểm dữ liệu gần nhất. Điều này giúp mô hình tổng quát hóa tốt hơn trên dữ liệu mới.</p>
+                                <p>SVM nhanh chóng trở thành <strong>"vua"</strong> của các thuật toán phân loại trong suốt thập niên 2000, trước khi Deep Learning lên ngôi.</p>
                             </div>
                         </div>
-                        <input type="range" id="rng-petal-length" class="styled-slider" min="1.0" max="7.0" step="0.1" value="1.4">
-                        <div class="slider-range"><span>1.0</span><span>7.0</span></div>
                     </div>
 
-                    <div class="slider-group" id="slider-petal-width">
-                        <div class="slider-header">
-                            <label for="inp-petal-width">Chiều rộng cánh hoa (Petal Width)</label>
-                            <div class="slider-value-box">
-                                <input type="number" id="inp-petal-width" class="value-input" step="0.1" min="0.1" max="3.0" value="0.2"> <span class="unit">cm</span>
+                    <div class="tl-item glass-panel">
+                        <div class="tl-dot"></div>
+                        <span class="tl-year">2001</span>
+                        <div class="tl-content">
+                            <div class="tl-img-wrap">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg" alt="Kernel trick" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Kernel "chiếu" dữ liệu lên chiều cao hơn</span>
+                            </div>
+                            <div>
+                                <h3>Kernel Trick — Cánh cửa phi tuyến</h3>
+                                <p>Bước đột phá quyết định: <strong>Kernel Trick</strong> cho phép SVM giải quyết các bài toán <em>phi tuyến tính</em> mà không cần tính toán trực tiếp trong không gian chiều cao.</p>
+                                <p>Hàm kernel <strong>RBF (Radial Basis Function)</strong> — chính là kernel được sử dụng trong dự án này — "chiếu" dữ liệu lên một không gian chiều cao hơn nơi chúng trở nên phân tách tuyến tính. Tất cả diễn ra <em>ngầm</em> thông qua phép tính tích vô hướng, không cần biến đổi tọa độ thực sự.</p>
                             </div>
                         </div>
-                        <input type="range" id="rng-petal-width" class="styled-slider" min="0.1" max="3.0" step="0.1" value="0.2">
-                        <div class="slider-range"><span>0.1</span><span>3.0</span></div>
                     </div>
 
-                    <!-- Preset Buttons -->
-                    <div class="preset-bar">
-                        <span class="preset-label">Dữ liệu mẫu:</span>
-                        <button type="button" class="preset-btn ripple-btn" data-preset="setosa">🌸 Setosa</button>
-                        <button type="button" class="preset-btn ripple-btn" data-preset="versicolor">🌺 Versicolor</button>
-                        <button type="button" class="preset-btn ripple-btn" data-preset="virginica">💐 Virginica</button>
+                    <div class="tl-item glass-panel">
+                        <div class="tl-dot"></div>
+                        <span class="tl-year">2026</span>
+                        <div class="tl-content">
+                            <div class="tl-img-wrap">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg" alt="Ngày nay" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Iris + SVM = Kinh điển bất tử</span>
+                            </div>
+                            <div>
+                                <h3>Hôm nay — Bạn đang viết tiếp câu chuyện</h3>
+                                <p>Sau <strong>90 năm</strong>, bộ dữ liệu Iris và thuật toán SVM vẫn là <strong>bộ đôi kinh điển</strong> được giảng dạy trong mọi khóa học Machine Learning trên toàn thế giới — từ Stanford, MIT cho đến các trường đại học Việt Nam.</p>
+                                <p>Ứng dụng <strong>Iris AI Explorer</strong> mà bạn đang sử dụng chính là minh chứng sống cho hành trình vĩ đại đó: từ 150 bông hoa được đo đạc bằng tay trên cánh đồng Canada năm 1936, đến một ứng dụng web AI hiện đại chạy trên đám mây năm 2026.</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
+            </section>
 
-                    <!-- Submit -->
-                    <button type="button" class="predict-btn ripple-btn" id="predict-btn">
-                        <span class="btn-text" id="btn-text">🔬 Phân tích & Dự đoán</span>
-                        <span class="loader" id="loader"></span>
-                    </button>
+            <!-- ── TAB 4: SVM ── -->
+            <section class="tab-panel" id="panel-svm" role="tabpanel" hidden>
+                <div class="glass-panel svm-panel">
+                    <h2 class="sec-title">🧠 Support Vector Machine — Giải thích trực quan</h2>
+                    <p class="sec-desc">Thuật toán đằng sau mọi dự đoán bạn vừa thấy.</p>
 
-                    <!-- Error -->
-                    <div id="error-msg" class="error-toast" role="alert" hidden></div>
-                </div>
-
-                <!-- Right: Radar Chart -->
-                <div class="glass-panel chart-panel">
-                    <h2 class="section-title">📊 Biểu đồ Radar</h2>
-                    <p class="section-desc">Hình dạng dữ liệu đầu vào của bạn.</p>
-                    <canvas id="radar-canvas" width="340" height="340"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== SCATTER PLOT ===== -->
-        <section class="scatter-section reveal-section" id="scatter-section">
-            <div class="glass-panel">
-                <h2 class="section-title">📈 Bản đồ Phân bố 150 mẫu Iris</h2>
-                <p class="section-desc">Trục X: Chiều dài cánh hoa (Petal Length) — Trục Y: Chiều rộng cánh hoa (Petal Width). Điểm ⭐ là dữ liệu bạn đang nhập.</p>
-                <div class="scatter-wrapper">
-                    <canvas id="scatter-canvas" width="800" height="400"></canvas>
-                </div>
-                <div class="scatter-legend">
-                    <span class="legend-item"><span class="legend-dot" style="background:#fb7185"></span> Setosa</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span> Versicolor</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#38bdf8"></span> Virginica</span>
-                    <span class="legend-item"><span class="legend-dot legend-star">⭐</span> Dữ liệu của bạn</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== SPECIES CARDS ===== -->
-        <section class="species-section reveal-section" id="species-section">
-            <h2 class="section-title-standalone">🃏 Ba loài Iris</h2>
-            <div class="species-grid">
-                <div class="glass-panel species-card magnetic-card" data-species="setosa" id="card-setosa">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg" alt="Iris Setosa" class="species-img" loading="lazy">
-                    <h3>🌸 Iris Setosa</h3>
-                    <p class="species-trait">Cánh hoa rất ngắn & nhỏ</p>
-                    <p class="species-fun">💡 Loài dễ phân biệt nhất — cánh hoa ngắn hơn hẳn 2 loài kia.</p>
-                </div>
-                <div class="glass-panel species-card magnetic-card" data-species="versicolor" id="card-versicolor">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg" alt="Iris Versicolor" class="species-img" loading="lazy">
-                    <h3>🌺 Iris Versicolor</h3>
-                    <p class="species-trait">Kích thước trung bình, cánh trải phẳng</p>
-                    <p class="species-fun">💡 Tên "versicolor" nghĩa là "nhiều màu" — hoa đổi sắc theo ánh sáng.</p>
-                </div>
-                <div class="glass-panel species-card magnetic-card" data-species="virginica" id="card-virginica">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg" alt="Iris Virginica" class="species-img" loading="lazy">
-                    <h3>💐 Iris Virginica</h3>
-                    <p class="species-trait">Kích thước lớn nhất, hoa tím đậm</p>
-                    <p class="species-fun">💡 Thường bị nhầm với Versicolor — SVM giúp phân biệt chính xác!</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== BOTANICAL PROFILE (hiện sau khi dự đoán) ===== -->
-        <section class="botanical-section glass-panel reveal-section" id="botanical-section" hidden>
-            <h2 class="section-title">🌺 Hồ sơ Thực vật học</h2>
-            <div class="botanical-grid">
-                <div class="botanical-img-container">
-                    <img src="" alt="" id="bot-image" class="botanical-img" loading="lazy">
-                </div>
-                <div class="botanical-info">
-                    <h3 id="bot-name" class="bot-name"></h3>
-                    <div class="bot-badge" id="bot-badge"></div>
-                    <table class="bot-table">
-                        <tr><td>Giới (Kingdom)</td><td id="bot-kingdom"></td></tr>
-                        <tr><td>Ngành (Phylum)</td><td id="bot-phylum"></td></tr>
-                        <tr><td>Lớp (Class)</td><td id="bot-class"></td></tr>
-                        <tr><td>Bộ (Order)</td><td id="bot-order"></td></tr>
-                        <tr><td>Họ (Family)</td><td id="bot-family"></td></tr>
-                        <tr><td>Chi (Genus)</td><td id="bot-genus"></td></tr>
-                        <tr><td>Loài (Species)</td><td id="bot-species"></td></tr>
-                    </table>
-                    <p id="bot-description" class="bot-desc"></p>
-                    <p id="bot-habitat" class="bot-habitat"></p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== PREDICTION HISTORY ===== -->
-        <section class="history-section glass-panel reveal-section" id="history-section">
-            <div class="history-header">
-                <h2 class="section-title">📋 Lịch sử Dự đoán</h2>
-                <div class="history-actions">
-                    <button class="glass-btn ripple-btn" id="export-btn" title="Xuất kết quả PNG">📤 Xuất ảnh</button>
-                    <button class="glass-btn ripple-btn" id="clear-history-btn" title="Xóa lịch sử">🗑️ Xóa</button>
-                </div>
-            </div>
-            <div class="history-table-wrapper">
-                <table class="history-table" id="history-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>SL</th><th>SW</th><th>PL</th><th>PW</th>
-                            <th>Kết quả</th>
-                            <th>Thời gian</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
-                <p class="history-empty" id="history-empty">Chưa có dự đoán nào. Hãy thử ngay!</p>
-            </div>
-        </section>
-
-        <!-- ===== SCIENTIFIC TIMELINE ===== -->
-        <section class="timeline-section reveal-section" id="timeline-section">
-            <h2 class="section-title-standalone">📜 Câu chuyện Khoa học</h2>
-            <p class="timeline-intro">Hành trình 90 năm từ một luống hoa đến thuật toán Machine Learning kinh điển.</p>
-            <div class="timeline">
-                <div class="timeline-item glass-panel reveal-section" data-year="1936">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-year">1936</div>
-                    <h3>Ronald A. Fisher & Edgar Anderson</h3>
-                    <p>Nhà thống kê huyền thoại <strong>Ronald Fisher</strong> công bố bài báo trên tạp chí <em>Annals of Eugenics</em>, sử dụng 150 mẫu hoa Iris (do nhà thực vật học <strong>Edgar Anderson</strong> thu thập tại bán đảo Gaspé, Canada) để giới thiệu phương pháp <strong>Linear Discriminant Analysis (LDA)</strong> — một trong những thuật toán phân loại đầu tiên của nhân loại.</p>
-                </div>
-                <div class="timeline-item glass-panel reveal-section" data-year="1992">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-year">1992</div>
-                    <h3>UCI Machine Learning Repository</h3>
-                    <p>Bộ dữ liệu Iris được đưa vào kho lưu trữ UCI — trở thành <strong>"Hello World" của Machine Learning</strong> toàn cầu. Mọi sinh viên ML trên thế giới đều bắt đầu hành trình của mình với bộ dữ liệu này.</p>
-                </div>
-                <div class="timeline-item glass-panel reveal-section" data-year="1995">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-year">1995</div>
-                    <h3>Vladimir Vapnik & SVM</h3>
-                    <p><strong>Vladimir Vapnik</strong> và <strong>Corinna Cortes</strong> công bố bài báo nền tảng về <strong>Support Vector Machines (SVM)</strong> — thuật toán tìm siêu phẳng tối ưu với <em>margin tối đa</em> để phân loại dữ liệu. SVM nhanh chóng thống trị lĩnh vực ML trước kỷ nguyên Deep Learning.</p>
-                </div>
-                <div class="timeline-item glass-panel reveal-section" data-year="2001">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-year">2001</div>
-                    <h3>Kernel Trick & RBF</h3>
-                    <p>SVM kết hợp <strong>Kernel Trick</strong> (đặc biệt là kernel <strong>RBF — Radial Basis Function</strong>) được chứng minh có thể giải quyết các bài toán <em>phi tuyến tính</em> — chiếu dữ liệu lên không gian chiều cao hơn để tìm đường phân tách. Đây chính là kỹ thuật được sử dụng trong dự án này.</p>
-                </div>
-                <div class="timeline-item glass-panel reveal-section" data-year="2026">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-year">Hôm nay</div>
-                    <h3>Iris + SVM = Kinh điển bất tử</h3>
-                    <p>Sau gần 90 năm, Iris Dataset và SVM vẫn là <strong>bộ đôi kinh điển</strong> được giảng dạy trong mọi khóa học Machine Learning trên toàn thế giới. Ứng dụng bạn đang sử dụng chính là minh chứng sống cho hành trình vĩ đại đó.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== SVM EXPLANATION ===== -->
-        <section class="svm-section reveal-section" id="svm-section">
-            <details class="glass-panel svm-details">
-                <summary class="svm-summary">🧠 SVM hoạt động như thế nào?</summary>
-                <div class="svm-content">
-                    <div class="svm-concept">
-                        <h3>1. Ý tưởng cốt lõi: Tìm đường biên tối ưu</h3>
-                        <p>SVM (Support Vector Machine) tìm một <strong>siêu phẳng (hyperplane)</strong> — tức là một đường thẳng (trong 2D) hoặc mặt phẳng (trong không gian nhiều chiều) — để <em>chia tách</em> các lớp dữ liệu sao cho khoảng cách từ đường biên đến các điểm dữ liệu gần nhất (gọi là <strong>Support Vectors</strong>) là <em>lớn nhất</em>.</p>
-                        <div class="svm-visual">
+                    <!-- Step 1 -->
+                    <div class="svm-step">
+                        <div class="svm-step-num">01</div>
+                        <div class="svm-step-body">
+                            <h3>Bài toán: Tìm đường biên tối ưu</h3>
+                            <p>Cho một tập dữ liệu gồm 2 lớp (ví dụ: Setosa và Versicolor), có <strong>vô số</strong> đường thẳng có thể chia tách chúng. Nhưng đường nào là tốt nhất?</p>
+                            <p>SVM trả lời: Đường tốt nhất là đường có <strong>khoảng cách (margin)</strong> lớn nhất tới các điểm dữ liệu gần nhất ở cả hai phía. Các điểm gần nhất này gọi là <strong>Support Vectors</strong> — chính là "trụ cột" quyết định vị trí đường biên.</p>
                             <div class="svm-demo">
-                                <div class="svm-point class-a" style="top:20%;left:15%"></div>
-                                <div class="svm-point class-a" style="top:35%;left:25%"></div>
-                                <div class="svm-point class-a" style="top:15%;left:30%"></div>
-                                <div class="svm-point class-a sv" style="top:45%;left:40%"></div>
-                                <div class="svm-line"></div>
-                                <div class="svm-margin"></div>
-                                <div class="svm-point class-b sv" style="top:55%;left:60%"></div>
-                                <div class="svm-point class-b" style="top:70%;left:70%"></div>
-                                <div class="svm-point class-b" style="top:80%;left:75%"></div>
-                                <div class="svm-point class-b" style="top:65%;left:85%"></div>
+                                <div class="svm-pts class-a" style="top:18%;left:12%"></div>
+                                <div class="svm-pts class-a" style="top:30%;left:22%"></div>
+                                <div class="svm-pts class-a" style="top:12%;left:28%"></div>
+                                <div class="svm-pts class-a" style="top:38%;left:18%"></div>
+                                <div class="svm-pts class-a sv" style="top:42%;left:38%">SV</div>
+                                <div class="svm-hyperplane"></div>
+                                <div class="svm-margin-zone"></div>
+                                <div class="svm-margin-label left-label">Margin</div>
+                                <div class="svm-margin-label right-label">Margin</div>
+                                <div class="svm-pts class-b sv" style="top:58%;left:62%">SV</div>
+                                <div class="svm-pts class-b" style="top:68%;left:72%"></div>
+                                <div class="svm-pts class-b" style="top:78%;left:68%"></div>
+                                <div class="svm-pts class-b" style="top:72%;left:82%"></div>
+                                <div class="svm-pts class-b" style="top:85%;left:78%"></div>
                             </div>
-                            <p class="svm-caption">Minh họa: Đường biên (xanh) chia tách 2 lớp. Các điểm nằm sát đường biên nhất = Support Vectors (viền sáng).</p>
+                            <p class="svm-caption">🔵 Lớp A (Setosa) — 🟠 Lớp B (Versicolor) — Đường xanh = Hyperplane — Vùng mờ = Margin tối đa. Các điểm có chữ "SV" = Support Vectors.</p>
                         </div>
                     </div>
-                    <div class="svm-concept">
-                        <h3>2. Kernel Trick: Giải bài toán phi tuyến</h3>
-                        <p>Khi dữ liệu không thể chia bằng đường thẳng, SVM sử dụng <strong>hàm kernel</strong> (VD: RBF) để "chiếu" dữ liệu lên một không gian chiều cao hơn. Trong không gian mới này, dữ liệu trở nên có thể phân tách tuyến tính!</p>
+
+                    <!-- Step 2 -->
+                    <div class="svm-step">
+                        <div class="svm-step-num">02</div>
+                        <div class="svm-step-body">
+                            <h3>Tại sao Margin lớn lại tốt?</h3>
+                            <p>Hãy tưởng tượng bạn đang vẽ đường phân cách giữa 2 đội bóng trên sân. Nếu đường kẻ nằm <em>sát</em> một đội, chỉ cần một cầu thủ đi lệch một bước là "lấn sân" sang đội kia → dự đoán sai.</p>
+                            <p>Nhưng nếu đường kẻ nằm <strong>chính giữa</strong> với khoảng cách đều nhau về hai phía, thì cả hai đội đều có "vùng đệm" an toàn → mô hình <strong>tổng quát hóa tốt hơn</strong> trên dữ liệu mới chưa thấy bao giờ.</p>
+                            <div class="margin-compare">
+                                <div class="margin-box bad">
+                                    <div class="margin-line bad-line"></div>
+                                    <span>❌ Margin nhỏ → Dễ sai</span>
+                                </div>
+                                <div class="margin-box good">
+                                    <div class="margin-line good-line"></div>
+                                    <span>✅ Margin lớn → Tổng quát tốt</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="svm-concept">
-                        <h3>3. Tại sao SVM phù hợp với Iris?</h3>
-                        <p>Bộ dữ liệu Iris có 150 mẫu, 4 đặc trưng, 3 lớp. Đây là bài toán <em>kích thước nhỏ, số chiều thấp</em> — chính xác là thế mạnh của SVM. Trong khi Deep Learning cần hàng triệu mẫu, SVM chỉ cần vài trăm mẫu đã cho kết quả cực kỳ chính xác.</p>
+
+                    <!-- Step 3 -->
+                    <div class="svm-step">
+                        <div class="svm-step-num">03</div>
+                        <div class="svm-step-body">
+                            <h3>Kernel Trick — Khi dữ liệu không "thẳng hàng"</h3>
+                            <p>Trong thực tế, dữ liệu hiếm khi phân tách tuyến tính gọn gàng. Ví dụ: Versicolor và Virginica có kích thước chồng chéo nhau rất nhiều.</p>
+                            <p>Kernel Trick giải quyết vấn đề này bằng cách <strong>"chiếu" dữ liệu</strong> từ không gian 2D lên không gian chiều cao hơn (3D, 4D,...). Trong không gian mới, dữ liệu bỗng trở nên phân tách được!</p>
+                            <div class="kernel-demo">
+                                <div class="kernel-stage before">
+                                    <span class="kernel-label">2D — Không phân tách được</span>
+                                    <div class="k-dot a" style="top:45%;left:30%"></div>
+                                    <div class="k-dot b" style="top:45%;left:50%"></div>
+                                    <div class="k-dot a" style="top:45%;left:70%"></div>
+                                    <div class="k-dot b" style="top:45%;left:40%"></div>
+                                    <div class="k-dot a" style="top:45%;left:80%"></div>
+                                    <div class="k-dot b" style="top:45%;left:60%"></div>
+                                </div>
+                                <div class="kernel-arrow">→ Kernel RBF →</div>
+                                <div class="kernel-stage after">
+                                    <span class="kernel-label">Chiều cao hơn — Phân tách được!</span>
+                                    <div class="k-dot a" style="top:70%;left:20%"></div>
+                                    <div class="k-dot b" style="top:25%;left:40%"></div>
+                                    <div class="k-dot a" style="top:75%;left:60%"></div>
+                                    <div class="k-dot b" style="top:20%;left:55%"></div>
+                                    <div class="k-dot a" style="top:72%;left:80%"></div>
+                                    <div class="k-dot b" style="top:30%;left:70%"></div>
+                                    <div class="k-split-line"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="svm-step">
+                        <div class="svm-step-num">04</div>
+                        <div class="svm-step-body">
+                            <h3>Tại sao SVM phù hợp với Iris?</h3>
+                            <p>Bộ dữ liệu Iris: <strong>150 mẫu, 4 đặc trưng, 3 lớp</strong>. Đây là bài toán <em>kích thước nhỏ, số chiều thấp</em> — chính xác là <strong>thế mạnh tuyệt đối</strong> của SVM:</p>
+                            <ul class="svm-list">
+                                <li>Deep Learning cần <strong>hàng triệu mẫu</strong> → SVM chỉ cần vài trăm mẫu đã đạt độ chính xác cực cao.</li>
+                                <li>SVM có <strong>cơ sở toán học chặt chẽ</strong> (lý thuyết VC dimension) — kết quả có thể giải thích và chứng minh được.</li>
+                                <li>Không bị <strong>overfitting</strong> dễ dàng nhờ cơ chế tối ưu margin.</li>
+                                <li>Kết hợp kernel RBF, SVM xử lý tốt các vùng <strong>chồng chéo</strong> giữa Versicolor và Virginica.</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </details>
-        </section>
+            </section>
 
-        <!-- ===== FOOTER ===== -->
+            <!-- ── TAB 5: LỊCH SỬ ── -->
+            <section class="tab-panel" id="panel-history" role="tabpanel" hidden>
+                <div class="glass-panel">
+                    <div class="hist-header">
+                        <h2 class="sec-title">📋 Lịch sử Dự đoán</h2>
+                        <div class="hist-actions">
+                            <button class="action-btn ripple-btn" id="export-btn">📤 Xuất ảnh</button>
+                            <button class="action-btn ripple-btn" id="clear-history-btn">🗑️ Xóa</button>
+                        </div>
+                    </div>
+                    <div class="hist-table-wrap">
+                        <table class="hist-table" id="hist-table">
+                            <thead><tr><th>#</th><th>SL</th><th>SW</th><th>PL</th><th>PW</th><th>Kết quả</th><th>Thời gian</th></tr></thead>
+                            <tbody id="hist-body"></tbody>
+                        </table>
+                        <p class="hist-empty" id="hist-empty">Chưa có dự đoán nào. Hãy thử ngay ở tab "Phân tích"!</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
         <footer class="app-footer glass-panel">
-            <p>Đồ án Học máy Nâng cao • 2026 — Xây dựng bằng FastAPI, SVM & Vanilla JavaScript</p>
+            <p>Đồ án Học máy Nâng cao • 2026 — FastAPI, SVM & Vanilla JavaScript</p>
         </footer>
     </div>
 
