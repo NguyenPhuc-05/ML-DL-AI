@@ -25,6 +25,8 @@ const PRESETS = {
 const BOTANICAL = {
     setosa: {
         name: 'Iris setosa', badge: 'Setosa',
+        image: 'images/setosa.jpg',
+        fallback: 'https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg',
         kingdom: 'Plantae', phylum: 'Magnoliophyta', class_: 'Liliopsida',
         order: 'Asparagales', family: 'Iridaceae', genus: 'Iris', species: 'I. setosa',
         description: 'Đặc trưng bởi cánh hoa rất ngắn, màu xanh tím rực rỡ.',
@@ -32,6 +34,8 @@ const BOTANICAL = {
     },
     versicolor: {
         name: 'Iris versicolor', badge: 'Versicolor',
+        image: 'images/versicolor.jpg',
+        fallback: 'https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg',
         kingdom: 'Plantae', phylum: 'Magnoliophyta', class_: 'Liliopsida',
         order: 'Asparagales', family: 'Iridaceae', genus: 'Iris', species: 'I. versicolor',
         description: 'Tên gọi có nghĩa là "nhiều màu". Kích thước trung bình, hoa đổi sắc theo ánh sáng.',
@@ -39,6 +43,8 @@ const BOTANICAL = {
     },
     virginica: {
         name: 'Iris virginica', badge: 'Virginica',
+        image: 'images/virginica.jpg',
+        fallback: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg',
         kingdom: 'Plantae', phylum: 'Magnoliophyta', class_: 'Liliopsida',
         order: 'Asparagales', family: 'Iridaceae', genus: 'Iris', species: 'I. virginica',
         description: 'Loài lớn nhất trong ba loài, màu tím đậm. Rất dễ nhầm với Versicolor nếu không đo đạc.',
@@ -400,14 +406,29 @@ function showBotanical(species, prob, kernel) {
     if (!panel) return;
     panel.hidden = false;
 
+    // Update Flower Image with fallback
+    const imgEl = document.getElementById('bot-img');
+    if (imgEl && b.image) {
+        imgEl.onerror = function() {
+            if (b.fallback && this.src !== b.fallback) {
+                this.src = b.fallback;
+            }
+        };
+        imgEl.src = b.image;
+        imgEl.alt = b.name;
+    }
+
     const nameEl = document.getElementById('bot-name');
     const badgeEl = document.getElementById('bot-badge');
-    const confEl = document.getElementById('bot-conf');
+    const probEl = document.getElementById('bot-prob') || document.getElementById('bot-conf');
     const descEl = document.getElementById('bot-desc');
     const habEl = document.getElementById('bot-habitat');
     if (nameEl) nameEl.textContent = b.name;
     if (badgeEl) badgeEl.textContent = b.badge;
-    if (confEl) confEl.textContent = `${Math.round(prob * 100)}% tin cậy`;
+    if (probEl) {
+        probEl.textContent = `${Math.round(prob * 100)}% tin cậy`;
+        probEl.style.display = 'inline-block';
+    }
 
     ['kingdom', 'phylum', 'class_', 'order', 'family', 'genus', 'species'].forEach(k => {
         const fieldKey = k === 'class_' ? 'class' : k;
