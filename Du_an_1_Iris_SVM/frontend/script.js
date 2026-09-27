@@ -70,7 +70,17 @@ const IRIS_DATA = [
     [5.6,2.4,2],[5.1,2.3,2],[5.1,1.9,2],[5.9,2.3,2],[5.7,2.5,2],[5.2,2.3,2],[5.0,1.9,2],[5.2,2.0,2],[5.4,2.3,2],[5.1,1.8,2]
 ];
 
-// ─── State ───
+// ─── Constants & State ───
+const SPECIES_NAMES = ['setosa', 'versicolor', 'virginica'];
+const CLASS_COLORS = ['#fb7185', '#a78bfa', '#38bdf8'];
+
+function setFeatureValue(key, val) {
+    const inp = document.getElementById(`inp-${key}`);
+    const rng = document.getElementById(`rng-${key}`);
+    if (inp) inp.value = val;
+    if (rng) { rng.value = val; updateSliderFill(rng); }
+}
+
 let currentPrediction = null;
 let isRequesting = false;
 let modelsInfo = null;
@@ -249,16 +259,7 @@ function initPresets() {
         btn.addEventListener('click', () => {
             const p = PRESETS[btn.dataset.preset];
             if (!p) return;
-            FEATURES.forEach(f => {
-                const val = p[f.key];
-                const rng = document.getElementById(`rng-${f.key}`);
-                const inp = document.getElementById(`inp-${f.key}`);
-                if (rng && inp) {
-                    rng.value = val;
-                    inp.value = val;
-                    updateSliderFill(rng);
-                }
-            });
+            FEATURES.forEach(f => setFeatureValue(f.key, p[f.key]));
             drawRadar();
             drawScatter();
             document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
@@ -377,67 +378,54 @@ async function fetchXaiExplanation(body) {
 }
 
 function highlightCard(species, prob) {
-    ['setosa', 'versicolor', 'virginica'].forEach(s => {
+    SPECIES_NAMES.forEach(s => {
         const card = document.getElementById(`card-${s}`);
         const probEl = document.getElementById(`prob-${s}`);
         if (!card) return;
-        if (s === species) {
-            card.classList.add('highlighted');
-            card.classList.remove('dimmed');
-            if (probEl) {
-                probEl.textContent = `${Math.round(prob * 100)}%`;
-                probEl.classList.add('show');
-            }
-        } else {
-            card.classList.remove('highlighted');
-            card.classList.add('dimmed');
-            if (probEl) {
-                probEl.classList.remove('show');
-                probEl.textContent = '';
-            }
+        const isMatch = (s === species);
+        card.classList.toggle('highlighted', isMatch);
+        card.classList.toggle('dimmed', !isMatch);
+        if (probEl) {
+            probEl.textContent = isMatch ? `${Math.round(prob * 100)}%` : '';
+            probEl.classList.toggle('show', isMatch);
         }
     });
 }
 
 function showBotanical(species, prob, kernel) {
     const b = BOTANICAL[species];
-    if (!b) return;
     const panel = document.getElementById('botanical-panel');
-    if (!panel) return;
+    if (!b || !panel) return;
     panel.hidden = false;
 
-    // Update Flower Image with fallback
     const imgEl = document.getElementById('bot-img');
     if (imgEl && b.image) {
         imgEl.onerror = function() {
-            if (b.fallback && this.src !== b.fallback) {
-                this.src = b.fallback;
-            }
+            if (b.fallback && this.src !== b.fallback) this.src = b.fallback;
         };
         imgEl.src = b.image;
         imgEl.alt = b.name;
     }
 
-    const nameEl = document.getElementById('bot-name');
-    const badgeEl = document.getElementById('bot-badge');
+    const setText = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = txt || '';
+    };
+
+    setText('bot-name', b.name);
+    setText('bot-badge', b.badge);
+    setText('bot-desc', b.description);
+    setText('bot-habitat', b.habitat);
+
     const probEl = document.getElementById('bot-prob') || document.getElementById('bot-conf');
-    const descEl = document.getElementById('bot-desc');
-    const habEl = document.getElementById('bot-habitat');
-    if (nameEl) nameEl.textContent = b.name;
-    if (badgeEl) badgeEl.textContent = b.badge;
     if (probEl) {
         probEl.textContent = `${Math.round(prob * 100)}% tin cậy`;
         probEl.style.display = 'inline-block';
     }
 
     ['kingdom', 'phylum', 'class_', 'order', 'family', 'genus', 'species'].forEach(k => {
-        const fieldKey = k === 'class_' ? 'class' : k;
-        const el = document.getElementById(`bot-${fieldKey}`);
-        if (el) el.textContent = b[k] || '';
+        setText(`bot-${k === 'class_' ? 'class' : k}`, b[k]);
     });
-
-    if (descEl) descEl.textContent = b.description;
-    if (habEl) habEl.textContent = b.habitat;
 
     const kernelBadge = document.getElementById('bot-kernel-badge');
     if (kernelBadge && kernel) {
@@ -695,7 +683,6 @@ function drawScatter() {
     ctx.restore();
 
     // 3. Plot 150 Iris Points
-    const classColors = ['#fb7185', '#a78bfa', '#38bdf8'];
     const svSet = (showSupportVectors && supportVectorsData?.support_vector_indices)
         ? new Set(supportVectorsData.support_vector_indices)
         : null;
@@ -716,7 +703,7 @@ function drawScatter() {
 
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = classColors[cls];
+        ctx.fillStyle = CLASS_COLORS[cls];
         ctx.fill();
         ctx.strokeStyle = isDark ? 'rgba(0,0,0,0.5)' : '#fff';
         ctx.lineWidth = 1;
@@ -779,15 +766,8 @@ function initClickToPredict() {
         const clampedPL = Math.max(1.0, Math.min(7.0, parseFloat(pl.toFixed(1))));
         const clampedPW = Math.max(0.1, Math.min(3.0, parseFloat(pw.toFixed(1))));
 
-        // Update inputs
-        const inpPL = document.getElementById('inp-petal-length');
-        const rngPL = document.getElementById('rng-petal-length');
-        const inpPW = document.getElementById('inp-petal-width');
-        const rngPW = document.getElementById('rng-petal-width');
-        if (inpPL) inpPL.value = clampedPL;
-        if (rngPL) { rngPL.value = clampedPL; updateSliderFill(rngPL); }
-        if (inpPW) inpPW.value = clampedPW;
-        if (rngPW) { rngPW.value = clampedPW; updateSliderFill(rngPW); }
+        setFeatureValue('petal-length', clampedPL);
+        setFeatureValue('petal-width', clampedPW);
 
         drawRadar();
         drawScatter();
@@ -992,16 +972,14 @@ function renderMiniBoundary(canvas, item, isDark) {
     }
 
     // Mini points
-    const classColors = ['#fb7185', '#a78bfa', '#38bdf8'];
     const xRange = item.x_range, yRange = item.y_range;
-
     IRIS_DATA.forEach(pt => {
         const [pl, pw, cls] = pt;
         const x = ((pl - xRange[0]) / (xRange[1] - xRange[0])) * W;
         const y = H - ((pw - yRange[0]) / (yRange[1] - yRange[0])) * H;
         ctx.beginPath();
         ctx.arc(x, y, 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = classColors[cls];
+        ctx.fillStyle = CLASS_COLORS[cls];
         ctx.fill();
     });
 }
@@ -1196,20 +1174,7 @@ function renderHistoryTable(history) {
             const id = parseInt(row.dataset.id);
             const h = history.find(x => x.id === id);
             if (!h) return;
-            const slInp = document.getElementById('inp-sepal-length');
-            const swInp = document.getElementById('inp-sepal-width');
-            const plInp = document.getElementById('inp-petal-length');
-            const pwInp = document.getElementById('inp-petal-width');
-            if (slInp) slInp.value = h.sepal_length;
-            if (swInp) swInp.value = h.sepal_width;
-            if (plInp) plInp.value = h.petal_length;
-            if (pwInp) pwInp.value = h.petal_width;
-
-            FEATURES.forEach(f => {
-                const rng = document.getElementById(`rng-${f.key}`);
-                const inp = document.getElementById(`inp-${f.key}`);
-                if (rng && inp) { rng.value = inp.value; updateSliderFill(rng); }
-            });
+            FEATURES.forEach(f => setFeatureValue(f.key, h[f.api]));
 
             const kSel = document.getElementById('kernel-select');
             if (kSel) { kSel.value = h.kernel || 'rbf'; updateKernelInfo(); }
@@ -1219,8 +1184,7 @@ function renderHistoryTable(history) {
             drawRadar();
             drawScatter();
 
-            const pTab = document.querySelector('.tab-btn[data-tab="predict"]');
-            if (pTab) pTab.click();
+            document.querySelector('.tab-btn[data-tab="predict"]')?.click();
         });
     });
 }
@@ -1230,14 +1194,11 @@ function initClearHistory() {
     if (!btn) return;
     btn.addEventListener('click', async () => {
         if (!confirm('Xóa toàn bộ lịch sử dự đoán trong database?')) return;
-        try {
-            await fetch(`${API_BASE}/predictions`, { method: 'DELETE' });
-        } catch { /* silent */ }
+        try { await fetch(`${API_BASE}/predictions`, { method: 'DELETE' }); } catch {}
         loadHistoryFromDB();
         currentPrediction = null;
-        ['setosa', 'versicolor', 'virginica'].forEach(s => {
-            const card = document.getElementById(`card-${s}`);
-            if (card) card.classList.remove('highlighted', 'dimmed');
+        SPECIES_NAMES.forEach(s => {
+            document.getElementById(`card-${s}`)?.classList.remove('highlighted', 'dimmed');
         });
         const bot = document.getElementById('botanical-panel');
         if (bot) bot.hidden = true;

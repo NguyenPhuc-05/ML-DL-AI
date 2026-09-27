@@ -36,6 +36,7 @@ from sklearn.svm import SVC
 iris_dataset = datasets.load_iris()
 X_iris = iris_dataset.data
 y_iris = iris_dataset.target
+IRIS_MEDIANS = np.median(X_iris, axis=0)
 
 # ─── Paths ───
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -45,36 +46,29 @@ DB_PATH = BASE_DIR / "data" / "predictions.db"
 
 # ─── Load metadata & models ───
 metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
-
-models = {}
-for m in metadata["models"]:
-    model_path = ARTIFACT_DIR / m["model_file"]
-    models[m["kernel"]] = joblib.load(model_path)
-
+models = {m["kernel"]: joblib.load(ARTIFACT_DIR / m["model_file"]) for m in metadata["models"]}
 DEFAULT_KERNEL = metadata.get("default_kernel", "rbf")
 
 
 # ─── Database setup ───
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS user_predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sepal_length REAL NOT NULL,
-            sepal_width REAL NOT NULL,
-            petal_length REAL NOT NULL,
-            petal_width REAL NOT NULL,
-            kernel TEXT NOT NULL,
-            prediction TEXT NOT NULL,
-            class_id INTEGER NOT NULL,
-            probability REAL NOT NULL,
-            model_version TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sepal_length REAL NOT NULL,
+                sepal_width REAL NOT NULL,
+                petal_length REAL NOT NULL,
+                petal_width REAL NOT NULL,
+                kernel TEXT NOT NULL,
+                prediction TEXT NOT NULL,
+                class_id INTEGER NOT NULL,
+                probability REAL NOT NULL,
+                model_version TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
 
 
 init_db()
@@ -189,45 +183,39 @@ def list_models():
 @app.post("/predict", response_model=IrisPrediction)
 def predict(data: IrisInput):
     """Predict iris species using selected kernel version."""
-    kernel = data.kernel
-    if kernel not in models:
-        raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
+    if data.kernel not in models:
+        raise HTTPException(status_code=400, detail=f"Kernel '{data.kernel}' not available")
 
-    model = models[kernel]
-    features = np.array(
-        [[data.sepal_length, data.sepal_width, data.petal_length, data.petal_width]],
-        dtype=float,
-    )
+    features = np.array([[data.sepal_length, data.sepal_width, data.petal_length, data.petal_width]], dtype=float)
     if not np.isfinite(features).all():
         raise HTTPException(status_code=422, detail="Features must be finite numbers")
 
-    prediction_idx = int(model.predict(features)[0])
+    # Single-pass probability inference
+    probs = models[data.kernel].predict_proba(features)[0]
+    prediction_idx = int(np.argmax(probs))
     label = metadata["class_mapping"].get(str(prediction_idx))
     if label is None:
         raise HTTPException(status_code=500, detail="Model returned an unknown class")
 
-    probability = float(model.predict_proba(features)[0][prediction_idx])
-
-    # Save to database
-    conn = get_db()
+    probability = float(probs[prediction_idx])
     now = datetime.now(timezone.utc).isoformat()
-    cursor = conn.execute(
-        """INSERT INTO user_predictions
-           (sepal_length, sepal_width, petal_length, petal_width, kernel, prediction, class_id, probability, model_version, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (data.sepal_length, data.sepal_width, data.petal_length, data.petal_width,
-         kernel, label, prediction_idx, probability, metadata["model_version"], now),
-    )
-    conn.commit()
-    record_id = cursor.lastrowid
-    conn.close()
+
+    with get_db() as conn:
+        cursor = conn.execute(
+            """INSERT INTO user_predictions
+               (sepal_length, sepal_width, petal_length, petal_width, kernel, prediction, class_id, probability, model_version, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (data.sepal_length, data.sepal_width, data.petal_length, data.petal_width,
+             data.kernel, label, prediction_idx, probability, metadata["model_version"], now),
+        )
+        record_id = cursor.lastrowid
 
     return IrisPrediction(
         id=record_id,
         class_id=prediction_idx,
         prediction=label,
         probability=probability,
-        kernel=kernel,
+        kernel=data.kernel,
         model_version=metadata["model_version"],
     )
 
@@ -235,21 +223,16 @@ def predict(data: IrisInput):
 @app.get("/predictions", response_model=list[PredictionRecord])
 def get_predictions(limit: int = Query(default=50, le=500)):
     """Get prediction history from database."""
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM user_predictions ORDER BY id DESC LIMIT ?", (limit,)
-    ).fetchall()
-    conn.close()
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM user_predictions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(row) for row in rows]
 
 
 @app.delete("/predictions")
 def clear_predictions():
     """Clear all prediction history."""
-    conn = get_db()
-    conn.execute("DELETE FROM user_predictions")
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        conn.execute("DELETE FROM user_predictions")
     return {"status": "cleared"}
 
 
@@ -258,46 +241,37 @@ def export_predictions():
     """Export all predictions as Excel file (.xlsx)."""
     try:
         import openpyxl
+        from openpyxl.styles import Font, PatternFill
     except ImportError:
         raise HTTPException(status_code=500, detail="openpyxl not installed")
 
-    conn = get_db()
-    rows = conn.execute("SELECT * FROM user_predictions ORDER BY id DESC").fetchall()
-    conn.close()
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM user_predictions ORDER BY id DESC").fetchall()
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Iris Predictions"
 
-    # Header
     headers = ["ID", "Sepal Length", "Sepal Width", "Petal Length", "Petal Width",
                "Kernel", "Prediction", "Class ID", "Probability (%)", "Model Version", "Created At"]
     ws.append(headers)
 
-    # Style header
-    from openpyxl.styles import Font, PatternFill
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="593E67", end_color="593E67", fill_type="solid")
     for cell in ws[1]:
-        cell.font = header_font
-        cell.fill = header_fill
+        cell.font, cell.fill = header_font, header_fill
 
-    # Data
-    for row in rows:
+    for r in rows:
         ws.append([
-            row["id"], row["sepal_length"], row["sepal_width"],
-            row["petal_length"], row["petal_width"], row["kernel"],
-            row["prediction"], row["class_id"],
-            round(row["probability"] * 100, 1),
-            row["model_version"], row["created_at"],
+            r["id"], r["sepal_length"], r["sepal_width"], r["petal_length"], r["petal_width"],
+            r["kernel"], r["prediction"], r["class_id"], round(r["probability"] * 100, 1),
+            r["model_version"], r["created_at"],
         ])
 
-    # Auto-width
     for col in ws.columns:
         max_len = max(len(str(cell.value or "")) for cell in col)
         ws.column_dimensions[col[0].column_letter].width = max_len + 3
 
-    # Save to buffer
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -310,14 +284,8 @@ def export_predictions():
 
 
 FEATURE_NAME_MAP = {
-    "sepal_length": 0,
-    "sepal_width": 1,
-    "petal_length": 2,
-    "petal_width": 3,
-    "sepal length (cm)": 0,
-    "sepal width (cm)": 1,
-    "petal length (cm)": 2,
-    "petal width (cm)": 3,
+    "sepal_length": 0, "sepal_width": 1, "petal_length": 2, "petal_width": 3,
+    "sepal length (cm)": 0, "sepal width (cm)": 1, "petal length (cm)": 2, "petal width (cm)": 3,
 }
 
 
@@ -328,38 +296,25 @@ def decision_boundary(
     feature_y: str = Query(default="petal_width"),
     resolution: int = Query(default=60, ge=20, le=100),
 ):
-    """
-    Generate a decision boundary grid for visualization.
-    Returns a 2D grid of predicted class IDs.
-    """
+    """Generate 2D decision boundary grid for visualization."""
     if kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
 
-    idx_x = FEATURE_NAME_MAP.get(feature_x)
-    idx_y = FEATURE_NAME_MAP.get(feature_y)
+    idx_x, idx_y = FEATURE_NAME_MAP.get(feature_x), FEATURE_NAME_MAP.get(feature_y)
     if idx_x is None or idx_y is None:
         raise HTTPException(status_code=400, detail="Invalid feature name")
 
-    X = X_iris
+    x_min, x_max = float(X_iris[:, idx_x].min() - 0.5), float(X_iris[:, idx_x].max() + 0.5)
+    y_min, y_max = float(X_iris[:, idx_y].min() - 0.5), float(X_iris[:, idx_y].max() + 0.5)
 
-    # Grid bounds with padding
-    x_min, x_max = float(X[:, idx_x].min() - 0.5), float(X[:, idx_x].max() + 0.5)
-    y_min, y_max = float(X[:, idx_y].min() - 0.5), float(X[:, idx_y].max() + 0.5)
+    xx_grid, yy_grid = np.meshgrid(np.linspace(x_min, x_max, resolution), np.linspace(y_min, y_max, resolution))
 
-    xx = np.linspace(x_min, x_max, resolution)
-    yy = np.linspace(y_min, y_max, resolution)
-    xx_grid, yy_grid = np.meshgrid(xx, yy)
-
-    # Build feature matrix: fill non-selected features with median values
-    grid_points = np.full((xx_grid.size, 4), 0.0)
-    medians = np.median(X, axis=0)
-    for i in range(4):
-        grid_points[:, i] = medians[i]
+    # Vectorized grid initialization using precomputed medians
+    grid_points = np.tile(IRIS_MEDIANS, (xx_grid.size, 1))
     grid_points[:, idx_x] = xx_grid.ravel()
     grid_points[:, idx_y] = yy_grid.ravel()
 
-    model = models[kernel]
-    preds = model.predict(grid_points).astype(int).tolist()
+    preds = models[kernel].predict(grid_points).astype(int).tolist()
 
     return {
         "kernel": kernel,
@@ -375,41 +330,31 @@ def decision_boundary(
 # ====================================================================
 @app.get("/support-vectors")
 def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf|poly|sigmoid)$")):
-    """
-    Detailed inspection of Support Vectors for the given kernel.
-    Returns support vector indices, counts per class, and linear hyperplane weights.
-    """
+    """Detailed inspection of Support Vectors (indices, counts per class, weights)."""
     if kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
 
-    model = models[kernel]
-    svc = model.named_steps["svc"]
-
+    svc = models[kernel].named_steps["svc"]
     indices = [int(idx) for idx in svc.support_]
     n_support = [int(n) for n in svc.n_support_]
 
-    # Map back to 150 Iris rows
-    sv_points = []
-    for idx in indices:
-        row = X_iris[idx]
-        sv_points.append({
+    sv_points = [
+        {
             "index": idx,
-            "sepal_length": float(row[0]),
-            "sepal_width": float(row[1]),
-            "petal_length": float(row[2]),
-            "petal_width": float(row[3]),
+            "sepal_length": float(X_iris[idx, 0]),
+            "sepal_width": float(X_iris[idx, 1]),
+            "petal_length": float(X_iris[idx, 2]),
+            "petal_width": float(X_iris[idx, 3]),
             "class_id": int(y_iris[idx]),
             "species": metadata["class_mapping"][str(int(y_iris[idx]))],
-        })
+        }
+        for idx in indices
+    ]
 
     response = {
         "kernel": kernel,
         "total_support_vectors": len(indices),
-        "n_support_per_class": {
-            "setosa": n_support[0],
-            "versicolor": n_support[1],
-            "virginica": n_support[2],
-        },
+        "n_support_per_class": {"setosa": n_support[0], "versicolor": n_support[1], "virginica": n_support[2]},
         "support_vector_indices": indices,
         "support_vectors": sv_points,
     }
@@ -418,8 +363,8 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
         response["coef"] = svc.coef_.tolist()
         response["intercept"] = svc.intercept_.tolist()
         response["hyperplane_math"] = (
-            "Phương trình siêu phẳng phân cách: w · x + b = 0. "
-            "Các điểm dữ liệu là Support Vector khi khoảng cách đến siêu phẳng đạt giá trị cực tiểu: y_i(w · x_i + b) = 1."
+            "Phương trình siêu phẳng: w · x + b = 0. "
+            "Các điểm dữ liệu là Support Vector khi: y_i(w · x_i + b) = 1."
         )
 
     return response
@@ -436,56 +381,43 @@ def svm_playground(
     degree: int = Query(default=3, ge=1, le=5),
     resolution: int = Query(default=50, ge=20, le=80),
 ):
-    """
-    Live SVM Training Playground on 2D Petal features (Petal Length vs Petal Width).
-    Recalculates decision boundary, support vectors and mathematical diagnosis instantly.
-    """
+    """Live SVM Training Playground on 2D Petal features with real-time Overfit/Underfit diagnosis."""
     X_2d = X_iris[:, [2, 3]]
-    y = y_iris
-
     kwargs = {"kernel": kernel, "C": C, "random_state": 42}
     if kernel in ("rbf", "poly", "sigmoid"):
         kwargs["gamma"] = gamma
     if kernel == "poly":
         kwargs["degree"] = degree
 
-    pipe = Pipeline([
-        ("scaler", StandardScaler()),
-        ("svc", SVC(**kwargs)),
-    ])
-    pipe.fit(X_2d, y)
-
+    pipe = Pipeline([("scaler", StandardScaler()), ("svc", SVC(**kwargs))]).fit(X_2d, y_iris)
     svc = pipe.named_steps["svc"]
-    train_acc = float(pipe.score(X_2d, y))
+    train_acc = float(pipe.score(X_2d, y_iris))
 
     x_min, x_max = float(X_2d[:, 0].min() - 0.5), float(X_2d[:, 0].max() + 0.5)
     y_min, y_max = float(X_2d[:, 1].min() - 0.5), float(X_2d[:, 1].max() + 0.5)
 
-    xx = np.linspace(x_min, x_max, resolution)
-    yy = np.linspace(y_min, y_max, resolution)
-    xx_grid, yy_grid = np.meshgrid(xx, yy)
+    xx_grid, yy_grid = np.meshgrid(np.linspace(x_min, x_max, resolution), np.linspace(y_min, y_max, resolution))
     grid_points = np.c_[xx_grid.ravel(), yy_grid.ravel()]
-
     preds = pipe.predict(grid_points).astype(int).tolist()
 
-    # Mathematical & ML diagnosis
+    # Diagnosis rule logic
     diagnoses = []
     if C >= 50.0:
-        diagnoses.append("⚠️ C rất lớn (Hard Margin): Mô hình phạt nặng sai số phân loại, margin rất hẹp $\\to$ Nhạy cảm với nhiễu & nguy cơ Quá khớp (Overfitting).")
+        diagnoses.append("⚠️ C rất lớn (Hard Margin): Mô hình phạt nặng sai số, margin hẹp → Nguy cơ Quá khớp (Overfitting).")
     elif C <= 0.05:
-        diagnoses.append("⚠️ C rất nhỏ (Soft Margin): Lề mở rộng tối đa, chấp nhận nhiều điểm vi phạm $\\to$ Nguy cơ Dưới khớp (Underfitting).")
+        diagnoses.append("⚠️ C rất nhỏ (Soft Margin): Lề mở rộng tối đa, chấp nhận nhiều điểm vi phạm → Nguy cơ Dưới khớp (Underfitting).")
     else:
-        diagnoses.append("✅ C ở mức cân bằng tốt giữa tối đa hóa khoảng cách lề và hạn chế lỗi phân loại.")
+        diagnoses.append("✅ C cân bằng tốt giữa tối đa hóa khoảng cách lề và hạn chế lỗi phân loại.")
 
     if kernel == "rbf":
         if gamma >= 10.0:
-            diagnoses.append("⚠️ Gamma rất cao: Bán kính tương tác Gaussian nhỏ, tạo các 'ốc đảo' bao quanh từng điểm dữ liệu cá lẻ $\\to$ Điển hình của hiện tượng Overfitting!")
+            diagnoses.append("⚠️ Gamma rất cao: Bán kính Gaussian nhỏ, tạo các 'ốc đảo' quanh từng điểm → Hiện tượng Overfitting!")
         elif gamma <= 0.05:
-            diagnoses.append("⚠️ Gamma quá nhỏ: Bán kính tương tác quá lớn, làm phẳng biên phân cách $\\to$ Không tận dụng được tính phi tuyến của RBF.")
+            diagnoses.append("⚠️ Gamma quá nhỏ: Bán kính tương tác quá lớn làm phẳng biên → Mất tính phi tuyến của RBF.")
         else:
-            diagnoses.append("✅ Gamma hài hòa: Đường biên uốn lượn tự nhiên theo mật độ của dữ liệu hoa.")
+            diagnoses.append("✅ Gamma hài hòa: Đường biên uốn lượn tự nhiên theo mật độ dữ liệu hoa.")
     elif kernel == "poly":
-        diagnoses.append(f"Đa thức bậc {degree}: Bậc càng cao thì đường biên càng uốn khúc mạnh, cần kiểm soát C để tránh phân tán.")
+        diagnoses.append(f"Đa thức bậc {degree}: Bậc càng cao đường biên càng uốn khúc mạnh, cần kiểm soát C hợp lý.")
 
     return {
         "kernel": kernel,
@@ -509,13 +441,7 @@ def svm_playground(
 # ====================================================================
 @app.get("/kernel-arena")
 def kernel_arena():
-    """
-    Comparison matrix and benchmark of all 4 SVM kernels (Linear, RBF, Poly, Sigmoid).
-    Includes side-by-side mini decision boundaries, latency benchmarks, and math properties.
-    """
-    arena_results = []
-    test_sample = np.array([[5.8, 3.0, 4.2, 1.3]])
-
+    """Comparison matrix and benchmark of all 4 SVM kernels (Linear, RBF, Poly, Sigmoid)."""
     descriptions = {
         "linear": {
             "surface": "Siêu phẳng tuyến tính (Flat Hyperplane)",
@@ -551,27 +477,25 @@ def kernel_arena():
     x_min, x_max = float(X_2d[:, 0].min() - 0.5), float(X_2d[:, 0].max() + 0.5)
     y_min, y_max = float(X_2d[:, 1].min() - 0.5), float(X_2d[:, 1].max() + 0.5)
     res = 40
-    xx = np.linspace(x_min, x_max, res)
-    yy = np.linspace(y_min, y_max, res)
-    xx_grid, yy_grid = np.meshgrid(xx, yy)
+    xx_grid, yy_grid = np.meshgrid(np.linspace(x_min, x_max, res), np.linspace(y_min, y_max, res))
 
-    medians = np.median(X_iris, axis=0)
-    grid_points = np.full((xx_grid.size, 4), 0.0)
-    for i in range(4):
-        grid_points[:, i] = medians[i]
+    grid_points = np.tile(IRIS_MEDIANS, (xx_grid.size, 1))
     grid_points[:, 2] = xx_grid.ravel()
     grid_points[:, 3] = yy_grid.ravel()
+
+    test_sample = np.array([[5.8, 3.0, 4.2, 1.3]])
+    arena_results = []
 
     for m in metadata["models"]:
         k = m["kernel"]
         model = models[k]
         svc = model.named_steps["svc"]
 
-        # Benchmark latency over 100 runs
+        # Latency benchmark (25 iterations)
         t0 = time.perf_counter()
-        for _ in range(100):
-            _ = model.predict(test_sample)
-        t_elapsed = (time.perf_counter() - t0) / 100 * 1000  # ms
+        for _ in range(25):
+            model.predict(test_sample)
+        latency = (time.perf_counter() - t0) / 25 * 1000  # ms
 
         preds = model.predict(grid_points).astype(int).tolist()
 
@@ -583,7 +507,7 @@ def kernel_arena():
             "cv_accuracy_std": round(m["cv_accuracy_std"] * 100, 2),
             "total_support_vectors": len(svc.support_),
             "n_support_per_class": [int(n) for n in svc.n_support_],
-            "latency_ms": round(t_elapsed, 3),
+            "latency_ms": round(latency, 3),
             "details": descriptions.get(k, {}),
             "mini_grid": [preds[i * res:(i + 1) * res] for i in range(res)],
             "x_range": [x_min, x_max],
@@ -599,35 +523,26 @@ def kernel_arena():
 # ====================================================================
 @app.post("/explain")
 def explain_prediction(data: IrisInput):
-    """
-    Explainable AI (XAI) feature attribution for a single prediction.
-    Calculates sensitivity-based feature importance and natural biological comparisons.
-    """
-    kernel = data.kernel
-    if kernel not in models:
-        raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
+    """Explainable AI (XAI) feature attribution via finite difference sensitivity analysis."""
+    if data.kernel not in models:
+        raise HTTPException(status_code=400, detail=f"Kernel '{data.kernel}' not available")
 
-    model = models[kernel]
+    model = models[data.kernel]
     sample = np.array([[data.sepal_length, data.sepal_width, data.petal_length, data.petal_width]], dtype=float)
     probs = model.predict_proba(sample)[0]
     pred_idx = int(np.argmax(probs))
     pred_label = metadata["class_mapping"][str(pred_idx)]
 
-    # Feature perturbation sensitivity
     feature_names = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     display_names = ["Chiều dài đài (Sepal Length)", "Chiều rộng đài (Sepal Width)", "Chiều dài cánh (Petal Length)", "Chiều rộng cánh (Petal Width)"]
 
+    step = 0.3
     diffs = []
     for i in range(4):
-        s_plus = sample.copy()
-        s_plus[0, i] += 0.3
-        p_plus = model.predict_proba(s_plus)[0][pred_idx]
-
-        s_minus = sample.copy()
-        s_minus[0, i] -= 0.3
-        p_minus = model.predict_proba(s_minus)[0][pred_idx]
-
-        diffs.append(abs(float(p_plus - p_minus)))
+        s_plus, s_minus = sample.copy(), sample.copy()
+        s_plus[0, i] += step
+        s_minus[0, i] -= step
+        diffs.append(abs(float(model.predict_proba(s_plus)[0][pred_idx] - model.predict_proba(s_minus)[0][pred_idx])))
 
     total = sum(diffs) or 1.0
     importances = [round(float(d / total * 100), 1) for d in diffs]
@@ -638,18 +553,16 @@ def explain_prediction(data: IrisInput):
         "virginica": {"petal_length": "4.5 – 6.9 cm", "petal_width": "1.4 – 2.5 cm", "sepal_length": "4.9 – 7.9 cm", "sepal_width": "2.2 – 3.8 cm"},
     }
 
-    attributions = []
-    for i in range(4):
-        f_key = feature_names[i]
-        val = sample[0, i]
-        attributions.append({
-            "feature": f_key,
+    attributions = [
+        {
+            "feature": feature_names[i],
             "display_name": display_names[i],
-            "value": float(val),
+            "value": float(sample[0, i]),
             "importance_pct": importances[i],
-            "typical_range": ranges[pred_label].get(f_key, ""),
-        })
-
+            "typical_range": ranges[pred_label].get(feature_names[i], ""),
+        }
+        for i in range(4)
+    ]
     attributions.sort(key=lambda x: x["importance_pct"], reverse=True)
     top_feature = attributions[0]["display_name"]
 
@@ -673,23 +586,19 @@ def explain_prediction(data: IrisInput):
 # ====================================================================
 @app.post("/predict-batch")
 def predict_batch(payload: BatchPredictRequest):
-    """
-    Batch prediction endpoint for up to 500 samples.
-    """
+    """Batch prediction endpoint for up to 500 samples."""
     if len(payload.samples) > 500:
         raise HTTPException(status_code=400, detail="Tối đa 500 mẫu trong một lần xử lý")
 
     results = []
     for idx, item in enumerate(payload.samples):
-        kernel = item.kernel or "rbf"
-        if kernel not in models:
-            kernel = "rbf"
+        kernel = item.kernel if item.kernel in models else "rbf"
         model = models[kernel]
         feats = np.array([[item.sepal_length, item.sepal_width, item.petal_length, item.petal_width]], dtype=float)
-        pred_idx = int(model.predict(feats)[0])
+        probs = model.predict_proba(feats)[0]
+        pred_idx = int(np.argmax(probs))
+        prob = float(probs[pred_idx])
         label = metadata["class_mapping"][str(pred_idx)]
-        prob = float(model.predict_proba(feats)[0][pred_idx])
-
         status = "Tin cậy cao" if prob >= 0.85 else ("Tin cậy khá" if prob >= 0.65 else "Vùng bất định")
 
         results.append({
