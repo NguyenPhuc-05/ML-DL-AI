@@ -1,5 +1,5 @@
 /* ================================================================
-   Iris AI Explorer — Main Script (Tabbed + Warm Palette)
+   Iris AI Explorer — Main Script (Multi-Kernel + DB + Decision Boundary)
    ================================================================ */
 
 // ─── API Configuration ───
@@ -21,7 +21,6 @@ const PRESETS = {
     virginica:  { 'sepal-length': 6.7, 'sepal-width': 3.1, 'petal-length': 5.6, 'petal-width': 2.4 }
 };
 
-// ─── Data ───
 const BOTANICAL = {
     setosa: {
         name: 'Iris setosa', badge: 'Setosa',
@@ -47,19 +46,16 @@ const BOTANICAL = {
 };
 
 const IRIS_DATA = [
-    // Setosa (0)
     [1.4,0.2,0],[1.4,0.2,0],[1.3,0.2,0],[1.5,0.2,0],[1.4,0.2,0],[1.7,0.4,0],[1.4,0.3,0],[1.5,0.2,0],[1.4,0.2,0],[1.5,0.1,0],
     [1.5,0.2,0],[1.6,0.2,0],[1.4,0.1,0],[1.1,0.1,0],[1.2,0.2,0],[1.5,0.4,0],[1.3,0.4,0],[1.4,0.3,0],[1.7,0.3,0],[1.5,0.3,0],
     [1.7,0.2,0],[1.5,0.4,0],[1.0,0.2,0],[1.7,0.5,0],[1.9,0.2,0],[1.6,0.2,0],[1.6,0.4,0],[1.5,0.2,0],[1.4,0.2,0],[1.6,0.2,0],
     [1.6,0.2,0],[1.5,0.4,0],[1.5,0.1,0],[1.4,0.2,0],[1.5,0.2,0],[1.2,0.2,0],[1.3,0.2,0],[1.4,0.1,0],[1.3,0.2,0],[1.5,0.2,0],
     [1.3,0.3,0],[1.3,0.3,0],[1.3,0.2,0],[1.6,0.6,0],[1.9,0.4,0],[1.4,0.3,0],[1.6,0.2,0],[1.4,0.2,0],[1.5,0.2,0],[1.4,0.2,0],
-    // Versicolor (1)
     [4.7,1.4,1],[4.5,1.5,1],[4.9,1.5,1],[4.0,1.3,1],[4.6,1.5,1],[4.5,1.3,1],[4.7,1.6,1],[3.3,1.0,1],[4.6,1.3,1],[3.9,1.4,1],
     [3.5,1.0,1],[4.2,1.5,1],[4.0,1.0,1],[4.7,1.4,1],[3.6,1.3,1],[4.4,1.4,1],[4.5,1.5,1],[4.1,1.0,1],[4.5,1.5,1],[3.9,1.1,1],
     [4.8,1.8,1],[4.0,1.3,1],[4.9,1.5,1],[4.7,1.2,1],[4.3,1.3,1],[4.4,1.4,1],[4.8,1.4,1],[5.0,1.7,1],[4.5,1.5,1],[3.5,1.0,1],
     [3.8,1.1,1],[3.7,1.0,1],[3.9,1.2,1],[5.1,1.6,1],[4.5,1.5,1],[4.5,1.6,1],[4.7,1.5,1],[4.4,1.3,1],[4.1,1.3,1],[4.0,1.3,1],
     [4.4,1.2,1],[4.6,1.4,1],[4.0,1.2,1],[3.3,1.0,1],[4.2,1.3,1],[4.2,1.2,1],[4.2,1.3,1],[4.3,1.3,1],[3.0,1.1,1],[4.1,1.3,1],
-    // Virginica (2)
     [6.0,2.5,2],[5.1,1.9,2],[5.9,2.1,2],[5.6,1.8,2],[5.8,2.2,2],[6.6,2.1,2],[4.5,1.7,2],[6.3,1.8,2],[5.8,1.8,2],[6.1,2.5,2],
     [5.1,2.0,2],[5.3,1.9,2],[5.5,2.1,2],[5.0,2.0,2],[5.1,2.4,2],[5.3,2.3,2],[5.5,1.8,2],[6.7,2.2,2],[6.9,2.3,2],[5.0,1.5,2],
     [5.7,2.3,2],[4.9,2.0,2],[6.7,2.0,2],[4.9,1.8,2],[5.7,2.1,2],[6.0,1.8,2],[4.8,1.8,2],[4.9,1.8,2],[5.6,2.1,2],[5.8,1.6,2],
@@ -70,6 +66,8 @@ const IRIS_DATA = [
 // ─── State ───
 let currentPrediction = null;
 let isRequesting = false;
+let modelsInfo = null;  // Cached model metadata from API
+let boundaryCache = {}; // Cache decision boundary data
 
 // ================================================================
 // 1. INITIALIZATION
@@ -84,12 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initMagneticCards();
     initRippleButtons();
     initPetals();
+    initKernelSelector();
+    initBoundarySelector();
+    initExportExcel();
+    initExportImage();
+    initClearHistory();
     drawRadar();
     drawScatter();
-    renderHistory();
+    loadHistoryFromDB();
     checkApiHealth();
-    initExport();
-    initClearHistory();
+    loadModelsInfo();
     animateNumbers();
 });
 
@@ -103,26 +105,17 @@ function initTabs() {
     btns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = `panel-${btn.dataset.tab}`;
-            
-            // Update buttons
-            btns.forEach(b => {
-                b.classList.remove('active');
-                b.setAttribute('aria-selected', 'false');
-            });
+            btns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
             btn.classList.add('active');
             btn.setAttribute('aria-selected', 'true');
-
-            // Update panels
-            panels.forEach(p => p.classList.remove('active'));
+            panels.forEach(p => { p.classList.remove('active'); p.hidden = true; });
             const targetPanel = document.getElementById(targetId);
             targetPanel.classList.add('active');
+            targetPanel.hidden = false;
 
-            // Redraw charts if needed when tab becomes visible
             if (btn.dataset.tab === 'predict') drawRadar();
-            if (btn.dataset.tab === 'data') {
-                drawScatter();
-                animateNumbers();
-            }
+            if (btn.dataset.tab === 'data') { drawScatter(); animateNumbers(); }
+            if (btn.dataset.tab === 'history') loadHistoryFromDB();
         });
     });
 }
@@ -131,7 +124,6 @@ function initTheme() {
     const saved = localStorage.getItem('iris-theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
     updateThemeIcon(saved);
-
     document.getElementById('theme-toggle').addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
@@ -148,66 +140,74 @@ function updateThemeIcon(theme) {
 }
 
 // ================================================================
-// 3. FALLING PETALS ANIMATION
+// 3. KERNEL SELECTOR & MODELS INFO
+// ================================================================
+function initKernelSelector() {
+    const select = document.getElementById('kernel-select');
+    select.addEventListener('change', () => updateKernelInfo());
+    updateKernelInfo();
+}
+
+async function loadModelsInfo() {
+    try {
+        const res = await fetch(`${API_BASE}/models`);
+        if (res.ok) {
+            modelsInfo = await res.json();
+            updateKernelInfo();
+        }
+    } catch (e) { /* silent */ }
+}
+
+function updateKernelInfo() {
+    const kernel = document.getElementById('kernel-select').value;
+    const accEl = document.getElementById('kernel-acc');
+    if (modelsInfo && modelsInfo.models) {
+        const m = modelsInfo.models.find(x => x.kernel === kernel);
+        if (m) {
+            accEl.textContent = `Accuracy: ${(m.cv_accuracy_mean * 100).toFixed(1)}% ± ${(m.cv_accuracy_std * 100).toFixed(1)}%`;
+            return;
+        }
+    }
+    accEl.textContent = 'Accuracy: Đang tải...';
+}
+
+// ================================================================
+// 4. FALLING PETALS ANIMATION
 // ================================================================
 function initPetals() {
     const container = document.getElementById('petals-container');
-    const colors = ['#84495F', '#B85B56', '#DE741C', '#FEA837']; // Warm palette colors
+    const colors = ['#84495F', '#B85B56', '#DE741C', '#FEA837'];
 
     function createPetal() {
         const petal = document.createElement('div');
         petal.classList.add('petal');
-        
-        // Randomize
         const size = Math.random() * 15 + 10;
         const left = Math.random() * 100;
         const duration = Math.random() * 10 + 10;
         const color = colors[Math.floor(Math.random() * colors.length)];
-        
         petal.style.width = `${size}px`;
         petal.style.height = `${size}px`;
         petal.style.left = `${left}%`;
         petal.style.animationDuration = `${duration}s`;
-
-        // SVG Leaf/Petal shape
-        petal.innerHTML = `<svg viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>`;
-        
-        // Simpler petal shape
         petal.innerHTML = `<svg viewBox="0 0 100 100" fill="${color}"><path d="M50 0 C 100 0, 100 100, 50 100 C 0 100, 0 0, 50 0 Z"/></svg>`;
-
         container.appendChild(petal);
-
-        setTimeout(() => {
-            petal.remove();
-        }, duration * 1000);
+        setTimeout(() => petal.remove(), duration * 1000);
     }
-
-    // Create initially and then periodically
-    for(let i=0; i<15; i++) {
-        setTimeout(createPetal, Math.random() * 5000);
-    }
+    for (let i = 0; i < 15; i++) setTimeout(createPetal, Math.random() * 5000);
     setInterval(createPetal, 1500);
 }
 
-
 // ================================================================
-// 4. SLIDERS & PRESETS
+// 5. SLIDERS & PRESETS
 // ================================================================
 function initSliders() {
     FEATURES.forEach(f => {
         const rng = document.getElementById(`rng-${f.key}`);
         const inp = document.getElementById(`inp-${f.key}`);
-
-        rng.addEventListener('input', () => {
-            inp.value = rng.value;
-            onValuesChanged();
-        });
+        rng.addEventListener('input', () => { inp.value = rng.value; onValuesChanged(); });
         inp.addEventListener('input', () => {
             let v = parseFloat(inp.value);
-            if (!isNaN(v)) {
-                v = Math.max(f.min, Math.min(f.max, v));
-                rng.value = v;
-            }
+            if (!isNaN(v)) { v = Math.max(f.min, Math.min(f.max, v)); rng.value = v; }
             onValuesChanged();
         });
     });
@@ -215,9 +215,7 @@ function initSliders() {
 
 function getValues() {
     const vals = {};
-    FEATURES.forEach(f => {
-        vals[f.key] = parseFloat(document.getElementById(`inp-${f.key}`).value) || 0;
-    });
+    FEATURES.forEach(f => { vals[f.key] = parseFloat(document.getElementById(`inp-${f.key}`).value) || 0; });
     return vals;
 }
 
@@ -232,13 +230,9 @@ function setValues(data) {
     onValuesChanged();
 }
 
-let debounceTimer;
 function onValuesChanged() {
     drawRadar();
-    if(document.getElementById('panel-data').classList.contains('active')) {
-        drawScatter();
-    }
-    clearTimeout(debounceTimer);
+    if (document.getElementById('panel-data').classList.contains('active')) drawScatter();
 }
 
 function initPresets() {
@@ -251,7 +245,7 @@ function initPresets() {
 }
 
 // ================================================================
-// 5. PREDICTION
+// 6. PREDICTION (Multi-Kernel + Save to DB)
 // ================================================================
 function initPredictBtn() {
     document.getElementById('predict-btn').addEventListener('click', handlePredict);
@@ -263,7 +257,8 @@ async function handlePredict() {
     errEl.hidden = true;
 
     const vals = getValues();
-    const body = {};
+    const kernel = document.getElementById('kernel-select').value;
+    const body = { kernel };
     FEATURES.forEach(f => { body[f.api] = vals[f.key]; });
 
     isRequesting = true;
@@ -285,12 +280,8 @@ async function handlePredict() {
         currentPrediction = species;
 
         highlightCards(species);
-        showBotanical(species, data.probability);
-        saveHistory(vals, species, data.probability);
-        
-        // Cập nhật scatter ẩn
+        showBotanical(species, data.probability, data.kernel);
         drawScatter();
-
         setApiStatus('online', 'API sẵn sàng');
     } catch (err) {
         errEl.textContent = `⚠️ ${err.message}`;
@@ -314,19 +305,17 @@ function highlightCards(species) {
     });
 }
 
-function showBotanical(species, prob) {
+function showBotanical(species, prob, kernel) {
     const sec = document.getElementById('botanical-panel');
     const d = BOTANICAL[species];
     if (!d) return;
 
-    // Lấy màu từ biến CSS
     const badgeColors = {
         setosa: getComputedStyle(document.body).getPropertyValue('--c2').trim(),
         versicolor: getComputedStyle(document.body).getPropertyValue('--c3').trim(),
         virginica: getComputedStyle(document.body).getPropertyValue('--c4').trim()
     };
     
-    // Gán thông tin
     document.getElementById('bot-img').src = document.getElementById(`card-${species}`).querySelector('img').src;
     document.getElementById('bot-name').textContent = d.name;
     
@@ -340,6 +329,13 @@ function showBotanical(species, prob) {
         probBadge.style.display = 'inline-block';
     } else {
         probBadge.style.display = 'none';
+    }
+
+    const kernelBadge = document.getElementById('bot-kernel-badge');
+    if (kernel) {
+        const kernelNames = { linear: 'Linear', rbf: 'RBF', poly: 'Poly', sigmoid: 'Sigmoid' };
+        kernelBadge.textContent = `🔧 Kernel: ${kernelNames[kernel] || kernel}`;
+        kernelBadge.style.display = 'inline-block';
     }
     
     document.getElementById('bot-kingdom').textContent = d.kingdom;
@@ -357,7 +353,7 @@ function showBotanical(species, prob) {
 }
 
 // ================================================================
-// 6. RADAR CHART (Canvas)
+// 7. RADAR CHART (Canvas)
 // ================================================================
 function drawRadar() {
     const canvas = document.getElementById('radar-canvas');
@@ -370,100 +366,101 @@ function drawRadar() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? styles.getPropertyValue('--text-sec').trim() : styles.getPropertyValue('--text').trim();
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-    
-    // Sử dụng màu palette mới
-    const accentColor = styles.getPropertyValue('--c4').trim(); 
+    const accentColor = styles.getPropertyValue('--c4').trim();
     const fillColor = isDark ? 'rgba(222,116,28,0.2)' : 'rgba(222,116,28,0.15)';
 
     ctx.clearRect(0, 0, W, H);
 
     const vals = getValues();
     const labels = FEATURES.map(f => f.label);
-    const normals = FEATURES.map(f => {
-        const v = vals[f.key];
-        return (v - f.min) / (f.max - f.min);
-    });
+    const normals = FEATURES.map(f => (vals[f.key] - f.min) / (f.max - f.min));
     const n = labels.length;
     const angleStep = (2 * Math.PI) / n;
     const startAngle = -Math.PI / 2;
 
-    // Grid rings
     for (let ring = 1; ring <= 5; ring++) {
         const r = (ring / 5) * R;
         ctx.beginPath();
         for (let i = 0; i <= n; i++) {
             const angle = startAngle + i * angleStep;
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
+            const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.closePath();
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.closePath(); ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.stroke();
     }
 
-    // Axes
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
+        ctx.beginPath(); ctx.moveTo(cx, cy);
         ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
-        ctx.strokeStyle = gridColor;
-        ctx.stroke();
+        ctx.strokeStyle = gridColor; ctx.stroke();
     }
 
-    // Data polygon
     ctx.beginPath();
     for (let i = 0; i <= n; i++) {
         const idx = i % n;
         const angle = startAngle + idx * angleStep;
         const r = normals[idx] * R;
-        const x = cx + r * Math.cos(angle);
-        const y = cy + r * Math.sin(angle);
+        const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
-    ctx.closePath();
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-    ctx.strokeStyle = accentColor;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    ctx.closePath(); ctx.fillStyle = fillColor; ctx.fill();
+    ctx.strokeStyle = accentColor; ctx.lineWidth = 2.5; ctx.stroke();
 
-    // Data points
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
         const r = normals[i] * R;
-        const x = cx + r * Math.cos(angle);
-        const y = cy + r * Math.sin(angle);
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = accentColor;
-        ctx.fill();
-        ctx.strokeStyle = isDark ? '#12091a' : '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        const x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = accentColor; ctx.fill();
+        ctx.strokeStyle = isDark ? '#12091a' : '#fff'; ctx.lineWidth = 2; ctx.stroke();
     }
 
-    // Labels
-    ctx.fillStyle = textColor;
-    ctx.font = '11px Inter, sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = textColor; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
         const lR = R + 18;
-        const x = cx + lR * Math.cos(angle);
-        const y = cy + lR * Math.sin(angle);
-        ctx.fillText(labels[i], x, y + 4);
+        ctx.fillText(labels[i], cx + lR * Math.cos(angle), cy + lR * Math.sin(angle) + 4);
     }
 }
 
 // ================================================================
-// 7. SCATTER PLOT (Canvas)
+// 8. SCATTER PLOT WITH DECISION BOUNDARY (Canvas)
 // ================================================================
+let currentBoundaryData = null;
+
+function initBoundarySelector() {
+    document.getElementById('boundary-kernel').addEventListener('change', (e) => {
+        const kernel = e.target.value;
+        if (!kernel) {
+            currentBoundaryData = null;
+            drawScatter();
+            return;
+        }
+        loadBoundary(kernel);
+    });
+}
+
+async function loadBoundary(kernel) {
+    if (boundaryCache[kernel]) {
+        currentBoundaryData = boundaryCache[kernel];
+        drawScatter();
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/decision-boundary?kernel=${kernel}&feature_x=petal_length&feature_y=petal_width&resolution=60`);
+        if (res.ok) {
+            const data = await res.json();
+            boundaryCache[kernel] = data;
+            currentBoundaryData = data;
+            drawScatter();
+        }
+    } catch (e) { /* silent */ }
+}
+
 function drawScatter() {
     const canvas = document.getElementById('scatter-canvas');
-    if(!canvas) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const pad = { top: 20, right: 20, bottom: 45, left: 55 };
@@ -472,163 +469,128 @@ function drawScatter() {
 
     const styles = getComputedStyle(document.documentElement);
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const bgColor = isDark ? '#12091a' : '#fafbfc'; // slight match to theme
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
     const textColor = isDark ? styles.getPropertyValue('--text-sec').trim() : '#666';
-    
-    // Warm Palette colors for species
-    const colors = ['#fb7185', '#a78bfa', '#38bdf8']; // Keep original for scatter to not confuse, or update? User asked to update palette.
-    // Let's use the warm palette for scatter too: Setosa, Versicolor, Virginica
-    // c2, c3, c4 from palette
+
     const sc2 = styles.getPropertyValue('--c2').trim() || '#84495F';
     const sc3 = styles.getPropertyValue('--c3').trim() || '#B85B56';
     const sc4 = styles.getPropertyValue('--c4').trim() || '#DE741C';
     const spColors = [sc2, sc3, sc4];
 
-    // Update legend colors
     const ldots = document.querySelectorAll('.ldot');
-    if(ldots.length >= 3) {
-        ldots[0].style.backgroundColor = spColors[0];
-        ldots[1].style.backgroundColor = spColors[1];
-        ldots[2].style.backgroundColor = spColors[2];
-    }
+    if (ldots.length >= 3) { ldots[0].style.backgroundColor = spColors[0]; ldots[1].style.backgroundColor = spColors[1]; ldots[2].style.backgroundColor = spColors[2]; }
 
     const xMin = 0.5, xMax = 7.5, yMin = -0.1, yMax = 2.8;
-
     ctx.clearRect(0, 0, W, H);
-    // Don't fill bg if we want it transparent in the container, but it's fine.
 
     const toX = v => pad.left + ((v - xMin) / (xMax - xMin)) * pW;
     const toY = v => pad.top + pH - ((v - yMin) / (yMax - yMin)) * pH;
 
+    // ── DECISION BOUNDARY ──
+    if (currentBoundaryData) {
+        const bd = currentBoundaryData;
+        const grid = bd.grid;
+        const res = bd.resolution;
+        const bxMin = bd.x_range[0], bxMax = bd.x_range[1];
+        const byMin = bd.y_range[0], byMax = bd.y_range[1];
+        
+        const boundaryColors = [
+            isDark ? 'rgba(132,73,95,0.18)' : 'rgba(132,73,95,0.12)',
+            isDark ? 'rgba(184,91,86,0.18)' : 'rgba(184,91,86,0.12)',
+            isDark ? 'rgba(222,116,28,0.18)' : 'rgba(222,116,28,0.12)',
+        ];
+
+        const cellW = pW / res;
+        const cellH = pH / res;
+
+        for (let row = 0; row < res; row++) {
+            for (let col = 0; col < res; col++) {
+                const classId = grid[row][col];
+                const gx = bxMin + (col / res) * (bxMax - bxMin);
+                const gy = byMax - (row / res) * (byMax - byMin);
+                const px = toX(gx);
+                const py = toY(gy);
+                ctx.fillStyle = boundaryColors[classId] || boundaryColors[0];
+                ctx.fillRect(px - cellW/2, py - cellH/2, cellW + 1, cellH + 1);
+            }
+        }
+    }
+
     // Grid
-    ctx.strokeStyle = gridColor;
-    ctx.lineWidth = 1;
-    for (let x = 1; x <= 7; x++) {
-        ctx.beginPath();
-        ctx.moveTo(toX(x), pad.top);
-        ctx.lineTo(toX(x), pad.top + pH);
-        ctx.stroke();
-    }
-    for (let y = 0; y <= 2.5; y += 0.5) {
-        ctx.beginPath();
-        ctx.moveTo(pad.left, toY(y));
-        ctx.lineTo(pad.left + pW, toY(y));
-        ctx.stroke();
-    }
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+    for (let x = 1; x <= 7; x++) { ctx.beginPath(); ctx.moveTo(toX(x), pad.top); ctx.lineTo(toX(x), pad.top + pH); ctx.stroke(); }
+    for (let y = 0; y <= 2.5; y += 0.5) { ctx.beginPath(); ctx.moveTo(pad.left, toY(y)); ctx.lineTo(pad.left + pW, toY(y)); ctx.stroke(); }
 
     // Axes labels
-    ctx.fillStyle = textColor;
-    ctx.font = '11px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    for (let x = 1; x <= 7; x++) {
-        ctx.fillText(x.toString(), toX(x), pad.top + pH + 18);
-    }
-    ctx.save();
-    ctx.textAlign = 'right';
-    for (let y = 0; y <= 2.5; y += 0.5) {
-        ctx.fillText(y.toFixed(1), pad.left - 8, toY(y) + 4);
-    }
+    ctx.fillStyle = textColor; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
+    for (let x = 1; x <= 7; x++) ctx.fillText(x.toString(), toX(x), pad.top + pH + 18);
+    ctx.save(); ctx.textAlign = 'right';
+    for (let y = 0; y <= 2.5; y += 0.5) ctx.fillText(y.toFixed(1), pad.left - 8, toY(y) + 4);
     ctx.restore();
 
-    // Axis titles
-    ctx.fillStyle = textColor;
-    ctx.font = '12px Inter, sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = textColor; ctx.font = '12px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('Petal Length (cm)', pad.left + pW / 2, H - 5);
-    ctx.save();
-    ctx.translate(14, pad.top + pH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText('Petal Width (cm)', 0, 0);
-    ctx.restore();
+    ctx.save(); ctx.translate(14, pad.top + pH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Petal Width (cm)', 0, 0); ctx.restore();
 
     // Data points
     IRIS_DATA.forEach(([pl, pw, sp]) => {
-        ctx.beginPath();
-        ctx.arc(toX(pl), toY(pw), 4, 0, Math.PI * 2);
-        ctx.fillStyle = spColors[sp];
-        ctx.globalAlpha = 0.7;
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(toX(pl), toY(pw), 4, 0, Math.PI * 2);
+        ctx.fillStyle = spColors[sp]; ctx.globalAlpha = 0.7; ctx.fill(); ctx.globalAlpha = 1;
     });
 
     // User point (star)
     const vals = getValues();
-    const ux = toX(vals['petal-length']);
-    const uy = toY(vals['petal-width']);
+    const ux = toX(vals['petal-length']), uy = toY(vals['petal-width']);
     drawStar(ctx, ux, uy, 5, 10, 5);
     ctx.fillStyle = styles.getPropertyValue('--c5').trim() || '#FEA837';
-    ctx.fill();
-    ctx.strokeStyle = isDark ? '#fff' : '#333';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.fill(); ctx.strokeStyle = isDark ? '#fff' : '#333'; ctx.lineWidth = 1.5; ctx.stroke();
 }
 
 function drawStar(ctx, cx, cy, spikes, outerR, innerR) {
-    let rot = Math.PI / 2 * 3;
-    const step = Math.PI / spikes;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - outerR);
+    let rot = Math.PI / 2 * 3; const step = Math.PI / spikes;
+    ctx.beginPath(); ctx.moveTo(cx, cy - outerR);
     for (let i = 0; i < spikes; i++) {
-        ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
-        rot += step;
-        ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
-        rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR); rot += step;
+        ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR); rot += step;
     }
-    ctx.lineTo(cx, cy - outerR);
-    ctx.closePath();
+    ctx.lineTo(cx, cy - outerR); ctx.closePath();
 }
 
 // ================================================================
-// 8. DATASET INFO ANIMATION
+// 9. DATASET INFO ANIMATION
 // ================================================================
 function animateNumbers() {
-    const nums = document.querySelectorAll('.info-num');
-    nums.forEach(num => {
+    document.querySelectorAll('.info-num').forEach(num => {
         const target = parseInt(num.dataset.count);
         let start = 0;
-        const duration = 1000;
-        const step = Math.max(1, target / (duration / 16));
-        
+        const step = Math.max(1, target / 60);
         num.textContent = '0';
-        
         const update = () => {
             start += step;
-            if (start < target) {
-                num.textContent = Math.floor(start);
-                requestAnimationFrame(update);
-            } else {
-                num.textContent = target;
-            }
+            if (start < target) { num.textContent = Math.floor(start); requestAnimationFrame(update); }
+            else num.textContent = target;
         };
         requestAnimationFrame(update);
     });
 }
 
-
 // ================================================================
-// 9. PREDICTION HISTORY (localStorage)
+// 10. PREDICTION HISTORY (from Database API)
 // ================================================================
-function getHistory() {
-    try { return JSON.parse(localStorage.getItem('iris-history-v2') || '[]'); } catch { return []; }
+async function loadHistoryFromDB() {
+    try {
+        const res = await fetch(`${API_BASE}/predictions?limit=50`);
+        if (!res.ok) throw new Error();
+        const history = await res.json();
+        renderHistoryTable(history);
+    } catch {
+        // Fallback: show empty
+        renderHistoryTable([]);
+    }
 }
 
-function saveHistory(vals, species, prob) {
-    const history = getHistory();
-    history.unshift({
-        sl: vals['sepal-length'], sw: vals['sepal-width'],
-        pl: vals['petal-length'], pw: vals['petal-width'],
-        species,
-        prob: prob ? (prob * 100).toFixed(1) + '%' : '',
-        time: new Date().toLocaleTimeString('vi-VN')
-    });
-    if (history.length > 15) history.pop(); // Keep 15
-    localStorage.setItem('iris-history-v2', JSON.stringify(history));
-    renderHistory();
-}
-
-function renderHistory() {
-    const history = getHistory();
+function renderHistoryTable(history) {
     const tbody = document.getElementById('hist-body');
     const empty = document.getElementById('hist-empty');
 
@@ -639,7 +601,6 @@ function renderHistory() {
     }
     empty.style.display = 'none';
 
-    // Get color for badge
     const styles = getComputedStyle(document.body);
     const badgeColors = {
         setosa: styles.getPropertyValue('--c2').trim(),
@@ -647,111 +608,86 @@ function renderHistory() {
         virginica: styles.getPropertyValue('--c4').trim()
     };
 
-    tbody.innerHTML = history.map((h, i) => `
+    tbody.innerHTML = history.map((h, i) => {
+        const species = h.prediction.toLowerCase();
+        const prob = (h.probability * 100).toFixed(1) + '%';
+        const time = h.created_at ? new Date(h.created_at).toLocaleString('vi-VN') : '';
+        return `
         <tr data-idx="${i}">
-            <td>${i + 1}</td>
-            <td>${h.sl}</td><td>${h.sw}</td><td>${h.pl}</td><td>${h.pw}</td>
-            <td><span style="color:${badgeColors[h.species] || '#888'};font-weight:700;text-transform:capitalize">${h.species}</span> <span style="font-size: 0.75rem; color: var(--text-sec);">${h.prob}</span></td>
-            <td>${h.time}</td>
-        </tr>
-    `).join('');
+            <td>${h.id}</td>
+            <td>${h.sepal_length}</td><td>${h.sepal_width}</td><td>${h.petal_length}</td><td>${h.petal_width}</td>
+            <td><span style="font-size:.75rem;font-weight:600;color:var(--text-sec);text-transform:uppercase">${h.kernel}</span></td>
+            <td><span style="color:${badgeColors[species] || '#888'};font-weight:700;text-transform:capitalize">${species}</span></td>
+            <td>${prob}</td>
+            <td style="font-size:.72rem;">${time}</td>
+        </tr>`;
+    }).join('');
 
     tbody.querySelectorAll('tr').forEach(tr => {
         tr.addEventListener('click', () => {
             const idx = parseInt(tr.dataset.idx);
             const h = history[idx];
             if (h) {
-                // Switch to predict tab
                 document.querySelector('.tab-btn[data-tab="predict"]').click();
                 setValues({
-                    'sepal-length': h.sl, 'sepal-width': h.sw,
-                    'petal-length': h.pl, 'petal-width': h.pw
+                    'sepal-length': h.sepal_length, 'sepal-width': h.sepal_width,
+                    'petal-length': h.petal_length, 'petal-width': h.petal_width
                 });
+                document.getElementById('kernel-select').value = h.kernel || 'rbf';
+                updateKernelInfo();
             }
         });
     });
 }
 
 function initClearHistory() {
-    document.getElementById('clear-history-btn').addEventListener('click', () => {
-        localStorage.removeItem('iris-history-v2');
-        renderHistory();
+    document.getElementById('clear-history-btn').addEventListener('click', async () => {
+        if (!confirm('Xóa toàn bộ lịch sử dự đoán?')) return;
+        try {
+            await fetch(`${API_BASE}/predictions`, { method: 'DELETE' });
+        } catch { /* silent */ }
+        loadHistoryFromDB();
         currentPrediction = null;
         ['setosa', 'versicolor', 'virginica'].forEach(s => {
             const card = document.getElementById(`card-${s}`);
-            if(card) card.classList.remove('highlighted', 'dimmed');
+            if (card) card.classList.remove('highlighted', 'dimmed');
         });
         const bot = document.getElementById('botanical-panel');
-        if(bot) bot.hidden = true;
+        if (bot) bot.hidden = true;
     });
 }
 
 // ================================================================
-// 10. EXPORT TO PNG
+// 11. EXPORT EXCEL
 // ================================================================
-function initExport() {
+function initExportExcel() {
+    document.getElementById('export-excel-btn').addEventListener('click', () => {
+        window.open(`${API_BASE}/predictions/export`, '_blank');
+    });
+}
+
+// ================================================================
+// 12. EXPORT IMAGE (PNG)
+// ================================================================
+function initExportImage() {
     document.getElementById('export-btn').addEventListener('click', () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 400;
+        canvas.width = 600; canvas.height = 400;
         const ctx = canvas.getContext('2d');
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const styles = getComputedStyle(document.body);
 
-        // Background
         ctx.fillStyle = isDark ? '#12091a' : '#fdf6f0';
         ctx.fillRect(0, 0, 600, 400);
 
-        const styles = getComputedStyle(document.body);
-
-        // Title
         ctx.fillStyle = isDark ? styles.getPropertyValue('--c5').trim() : styles.getPropertyValue('--c1').trim();
-        ctx.font = 'bold 20px Inter, sans-serif';
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 20px Inter, sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('🌸 Iris AI Explorer — Lịch sử Dự đoán', 300, 35);
 
-        // Just draw a table of recent history since this is on the history tab
-        const history = getHistory().slice(0, 5); // top 5
         ctx.fillStyle = isDark ? '#a08aaa' : '#6e5570';
-        ctx.font = 'bold 12px Inter, sans-serif';
-        ctx.textAlign = 'left';
-        
-        let y = 80;
-        ctx.fillText('#    SL   SW   PL   PW    Kết quả', 40, y);
-        ctx.beginPath();
-        ctx.moveTo(40, y + 8);
-        ctx.lineTo(560, y + 8);
-        ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-        ctx.stroke();
+        ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Đồ án Học máy Nâng cao • 2026 • Nguyễn Xuân Phúc', 300, 380);
 
-        y += 30;
-        ctx.font = '13px Inter, sans-serif';
-        if(history.length === 0) {
-            ctx.textAlign = 'center';
-            ctx.fillText('Chưa có lịch sử dự đoán.', 300, y);
-        } else {
-            history.forEach((h, i) => {
-                ctx.fillStyle = isDark ? '#f0e8f5' : '#2d1b30';
-                ctx.fillText(`${i+1}`, 40, y);
-                ctx.fillText(`${h.sl}`, 75, y);
-                ctx.fillText(`${h.sw}`, 115, y);
-                ctx.fillText(`${h.pl}`, 155, y);
-                ctx.fillText(`${h.pw}`, 195, y);
-                
-                // Colorize species
-                ctx.fillStyle = styles.getPropertyValue('--c4').trim();
-                ctx.fillText(`${h.species.toUpperCase()}`, 240, y);
-                
-                y += 25;
-            });
-        }
-
-        // Footer
-        ctx.fillStyle = isDark ? '#a08aaa' : '#6e5570';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Đồ án Học máy Nâng cao • 2026', 300, 380);
-
-        // Download
         const link = document.createElement('a');
         link.download = `iris-history-${Date.now()}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -760,13 +696,12 @@ function initExport() {
 }
 
 // ================================================================
-// 11. EFFECTS (Cursor, Hover, Ripple)
+// 13. EFFECTS (Cursor, Hover, Ripple)
 // ================================================================
 function initCursorGlow() {
     const glow = document.getElementById('cursor-glow');
     document.addEventListener('mousemove', (e) => {
-        glow.style.left = e.clientX + 'px';
-        glow.style.top = e.clientY + 'px';
+        glow.style.left = e.clientX + 'px'; glow.style.top = e.clientY + 'px';
         if (!glow.classList.contains('active')) glow.classList.add('active');
     });
     document.addEventListener('mouseleave', () => glow.classList.remove('active'));
@@ -776,29 +711,21 @@ function initMagneticCards() {
     document.querySelectorAll('.magnetic-card').forEach(card => {
         card.addEventListener('mousemove', (e) => {
             const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const midX = rect.width / 2;
-            const midY = rect.height / 2;
-            const rotY = ((x - midX) / midX) * 8;
-            const rotX = ((midY - y) / midY) * 8;
+            const rotY = ((e.clientX - rect.left - rect.width / 2) / (rect.width / 2)) * 8;
+            const rotX = ((rect.height / 2 - (e.clientY - rect.top)) / (rect.height / 2)) * 8;
             card.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.02)`;
         });
         card.addEventListener('mouseleave', () => {
-            if(card.classList.contains('highlighted')) {
-                card.style.transform = 'scale(1.04)';
-            } else if (card.classList.contains('dimmed')) {
-                card.style.transform = 'scale(0.96)';
-            } else {
-                card.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
-            }
+            if (card.classList.contains('highlighted')) card.style.transform = 'scale(1.04)';
+            else if (card.classList.contains('dimmed')) card.style.transform = 'scale(0.96)';
+            else card.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
         });
     });
 }
 
 function initRippleButtons() {
     document.querySelectorAll('.ripple-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             const rect = this.getBoundingClientRect();
             const ripple = document.createElement('span');
             ripple.classList.add('ripple');
@@ -813,7 +740,7 @@ function initRippleButtons() {
 }
 
 // ================================================================
-// 12. API HEALTH CHECK
+// 14. API HEALTH CHECK
 // ================================================================
 function setApiStatus(status, label) {
     const el = document.getElementById('api-status');

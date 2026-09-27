@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iris AI Explorer — Khám phá hoa Iris bằng Trí tuệ Nhân tạo</title>
-    <meta name="description" content="Ứng dụng tương tác khám phá bộ dữ liệu Iris kinh điển bằng thuật toán SVM.">
+    <meta name="description" content="Ứng dụng tương tác khám phá bộ dữ liệu Iris kinh điển bằng thuật toán SVM đa nhân.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,7 +31,7 @@
                 <span class="logo-icon">🌸</span>
                 <div>
                     <h1>Iris AI Explorer</h1>
-                    <p class="subtitle">Khám phá & Dự đoán loài hoa bằng SVM</p>
+                    <p class="subtitle">Khám phá & Dự đoán loài hoa bằng SVM đa nhân</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -52,6 +52,7 @@
             <button class="tab-btn" role="tab" data-tab="science">📜 Câu chuyện</button>
             <button class="tab-btn" role="tab" data-tab="svm">🧠 SVM</button>
             <button class="tab-btn" role="tab" data-tab="history">📋 Lịch sử</button>
+            <button class="tab-btn" role="tab" data-tab="about">👤 Giới thiệu</button>
         </nav>
 
         <!-- ===== TAB PANELS ===== -->
@@ -64,6 +65,20 @@
                     <div class="glass-panel input-panel">
                         <h2 class="sec-title">🎛️ Thông số đo lường</h2>
                         <p class="sec-desc">Kéo thanh trượt hoặc nhập số.</p>
+
+                        <!-- Kernel Selector -->
+                        <div class="kernel-selector">
+                            <label for="kernel-select" class="kernel-label">🔧 Chọn nhân SVM (Kernel):</label>
+                            <select id="kernel-select" class="kernel-select">
+                                <option value="linear">v1 — Linear (Tuyến tính)</option>
+                                <option value="rbf" selected>v2 — RBF (Radial Basis Function)</option>
+                                <option value="poly">v3 — Polynomial (Đa thức)</option>
+                                <option value="sigmoid">v4 — Sigmoid</option>
+                            </select>
+                            <div class="kernel-info" id="kernel-info">
+                                <span class="kernel-acc" id="kernel-acc">Accuracy: —</span>
+                            </div>
+                        </div>
 
                         <div class="slider-group" id="sg-sepal-length">
                             <div class="slider-header">
@@ -147,6 +162,7 @@
                             <div style="margin-bottom: 0.8rem;">
                                 <span class="bot-badge" id="bot-badge"></span>
                                 <span class="bot-badge" id="bot-prob" style="margin-left: 0.4rem; background: var(--glass-bg); color: var(--text); border: 1px solid var(--glass-border);"></span>
+                                <span class="bot-badge" id="bot-kernel-badge" style="margin-left: 0.4rem; background: var(--c1); color: white;"></span>
                             </div>
                             <table class="bot-table">
                                 <tr><td>Giới</td><td id="bot-kingdom"></td></tr>
@@ -167,8 +183,20 @@
             <!-- ── TAB 2: DỮ LIỆU ── -->
             <section class="tab-panel" id="panel-data" role="tabpanel" hidden>
                 <div class="glass-panel">
-                    <h2 class="sec-title">📈 Bản đồ 150 mẫu Iris</h2>
-                    <p class="sec-desc">Trục X: Petal Length — Trục Y: Petal Width. Điểm ⭐ = Dữ liệu bạn nhập.</p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
+                        <h2 class="sec-title" style="margin-bottom:0;">📈 Bản đồ 150 mẫu Iris</h2>
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <label for="boundary-kernel" style="font-size:.8rem;color:var(--text-sec);font-weight:600;">Decision Boundary:</label>
+                            <select id="boundary-kernel" class="kernel-select" style="min-width:120px;">
+                                <option value="">Ẩn</option>
+                                <option value="linear">Linear</option>
+                                <option value="rbf">RBF</option>
+                                <option value="poly">Poly</option>
+                                <option value="sigmoid">Sigmoid</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="sec-desc">Trục X: Petal Length — Trục Y: Petal Width. Điểm ⭐ = Dữ liệu bạn nhập. Vùng màu = Decision Boundary.</p>
                     <div class="scatter-wrap"><canvas id="scatter-canvas" width="800" height="420"></canvas></div>
                     <div class="legend">
                         <span class="legend-item"><span class="ldot" style="background:#fb7185"></span> Setosa</span>
@@ -183,7 +211,7 @@
                         <div class="info-card"><div class="info-num" data-count="150">0</div><div class="info-label">Mẫu dữ liệu</div></div>
                         <div class="info-card"><div class="info-num" data-count="4">0</div><div class="info-label">Đặc trưng</div></div>
                         <div class="info-card"><div class="info-num" data-count="3">0</div><div class="info-label">Loài hoa</div></div>
-                        <div class="info-card"><div class="info-num" data-count="1936">0</div><div class="info-label">Năm công bố</div></div>
+                        <div class="info-card"><div class="info-num" data-count="4">0</div><div class="info-label">Phiên bản SVM</div></div>
                     </div>
                 </div>
             </section>
@@ -201,7 +229,7 @@
                         <div class="tl-content">
                             <div class="tl-img-wrap">
                                 <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Youngronaldfisher2.JPG" alt="Ronald A. Fisher" class="tl-img" loading="lazy">
-                                <span class="tl-img-cap">Ronald A. Fisher (1890–1962)</span>
+                                <span class="tl-img-cap">Ronald A. Fisher (1890–1962)<br><em class="img-credit">📷 Wikimedia Commons, Public Domain</em></span>
                             </div>
                             <div>
                                 <h3>Ronald A. Fisher & Edgar Anderson</h3>
@@ -218,7 +246,7 @@
                         <div class="tl-content">
                             <div class="tl-img-wrap">
                                 <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg" alt="Iris Versicolor" class="tl-img" loading="lazy">
-                                <span class="tl-img-cap">Iris versicolor — loài hoa kinh điển</span>
+                                <span class="tl-img-cap">Iris versicolor — loài hoa kinh điển<br><em class="img-credit">📷 Wikimedia Commons, CC BY-SA 3.0</em></span>
                             </div>
                             <div>
                                 <h3>UCI Machine Learning Repository</h3>
@@ -234,7 +262,7 @@
                         <div class="tl-content">
                             <div class="tl-img-wrap">
                                 <img src="images/vapnik.png" alt="Vladimir Vapnik" class="tl-img" loading="lazy">
-                                <span class="tl-img-cap">Vladimir Vapnik (1936–)</span>
+                                <span class="tl-img-cap">Vladimir Vapnik (1936–)<br><em class="img-credit">📷 Ảnh do sinh viên cung cấp</em></span>
                             </div>
                             <div>
                                 <h3>Vladimir Vapnik & SVM ra đời</h3>
@@ -250,8 +278,8 @@
                         <span class="tl-year">2001</span>
                         <div class="tl-content">
                             <div class="tl-img-wrap">
-                                <img src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=400&q=80" alt="Kernel trick" class="tl-img" loading="lazy">
-                                <span class="tl-img-cap">Kernel "chiếu" dữ liệu lên chiều cao hơn</span>
+                                <img src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=400&q=80" alt="Kernel trick visualization" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Kernel "chiếu" dữ liệu lên chiều cao hơn<br><em class="img-credit">📷 Unsplash</em></span>
                             </div>
                             <div>
                                 <h3>Kernel Trick — Cánh cửa phi tuyến</h3>
@@ -266,8 +294,8 @@
                         <span class="tl-year">2026</span>
                         <div class="tl-content">
                             <div class="tl-img-wrap">
-                                <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=400&q=80" alt="Ngày nay" class="tl-img" loading="lazy">
-                                <span class="tl-img-cap">Iris + SVM = Kinh điển bất tử</span>
+                                <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=400&q=80" alt="AI ngày nay" class="tl-img" loading="lazy">
+                                <span class="tl-img-cap">Iris + SVM = Kinh điển bất tử<br><em class="img-credit">📷 Unsplash</em></span>
                             </div>
                             <div>
                                 <h3>Hôm nay — Bạn đang viết tiếp câu chuyện</h3>
@@ -276,6 +304,18 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Image Credits Summary -->
+                <div class="glass-panel" style="margin-top:1rem;">
+                    <h3 class="sec-title" style="font-size:.9rem;">📝 Nguồn ảnh sử dụng</h3>
+                    <ul style="font-size:.78rem;color:var(--text-sec);line-height:1.8;padding-left:1.2rem;">
+                        <li><strong>Ronald A. Fisher</strong> — Wikimedia Commons, Public Domain</li>
+                        <li><strong>Iris Setosa, Versicolor, Virginica</strong> — Wikimedia Commons, CC BY-SA 3.0</li>
+                        <li><strong>Vladimir Vapnik</strong> — Ảnh do sinh viên cung cấp</li>
+                        <li><strong>Ảnh minh hoạ Kernel Trick & AI</strong> — Unsplash (Free License)</li>
+                        <li><strong>Ảnh đại diện sinh viên</strong> — Ảnh cá nhân</li>
+                    </ul>
                 </div>
             </section>
 
@@ -368,6 +408,22 @@
                     <div class="svm-step">
                         <div class="svm-step-num">04</div>
                         <div class="svm-step-body">
+                            <h3>4 phiên bản Kernel trong dự án này</h3>
+                            <p>Dự án này cung cấp <strong>4 phiên bản mô hình SVM</strong>, mỗi phiên bản sử dụng một hàm nhân (kernel) khác nhau:</p>
+                            <ul class="svm-list">
+                                <li><strong>v1 — Linear:</strong> Phân tách bằng đường thẳng/mặt phẳng. Đơn giản, nhanh, phù hợp khi dữ liệu phân tách tuyến tính (ví dụ: Setosa vs Versicolor).</li>
+                                <li><strong>v2 — RBF (Radial Basis Function):</strong> Tạo đường biên phi tuyến linh hoạt. Mặc định và <em>phổ biến nhất</em>. Xử lý tốt vùng chồng chéo giữa Versicolor-Virginica.</li>
+                                <li><strong>v3 — Polynomial:</strong> Sử dụng đa thức bậc cao để phân tách. Có thể tạo ra đường biên phức tạp hơn Linear nhưng ít linh hoạt hơn RBF.</li>
+                                <li><strong>v4 — Sigmoid:</strong> Mô phỏng hành vi của mạng neural đơn lớp. Ít dùng trong thực tế nhưng có giá trị so sánh học thuật.</li>
+                            </ul>
+                            <p>Bạn có thể <strong>chuyển đổi giữa các kernel</strong> ở tab "Phân tích" để so sánh kết quả, và xem <strong>Decision Boundary</strong> ở tab "Dữ liệu" để trực quan hóa cách mỗi kernel chia dữ liệu khác nhau!</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="svm-step">
+                        <div class="svm-step-num">05</div>
+                        <div class="svm-step-body">
                             <h3>Tại sao SVM phù hợp với Iris?</h3>
                             <p>Bộ dữ liệu Iris: <strong>150 mẫu, 4 đặc trưng, 3 lớp</strong>. Đây là bài toán <em>kích thước nhỏ, số chiều thấp</em> — chính xác là <strong>thế mạnh tuyệt đối</strong> của SVM:</p>
                             <ul class="svm-list">
@@ -385,18 +441,94 @@
             <section class="tab-panel" id="panel-history" role="tabpanel" hidden>
                 <div class="glass-panel">
                     <div class="hist-header">
-                        <h2 class="sec-title">📋 Lịch sử Dự đoán</h2>
+                        <h2 class="sec-title">📋 Lịch sử Dự đoán (Database)</h2>
                         <div class="hist-actions">
+                            <button class="action-btn ripple-btn" id="export-excel-btn">📥 Tải Excel</button>
                             <button class="action-btn ripple-btn" id="export-btn">📤 Xuất ảnh</button>
-                            <button class="action-btn ripple-btn" id="clear-history-btn">🗑️ Xóa</button>
+                            <button class="action-btn ripple-btn" id="clear-history-btn">🗑️ Xóa tất cả</button>
                         </div>
                     </div>
                     <div class="hist-table-wrap">
                         <table class="hist-table" id="hist-table">
-                            <thead><tr><th>#</th><th>SL</th><th>SW</th><th>PL</th><th>PW</th><th>Kết quả</th><th>Thời gian</th></tr></thead>
+                            <thead><tr><th>#</th><th>SL</th><th>SW</th><th>PL</th><th>PW</th><th>Kernel</th><th>Kết quả</th><th>Xác suất</th><th>Thời gian</th></tr></thead>
                             <tbody id="hist-body"></tbody>
                         </table>
                         <p class="hist-empty" id="hist-empty">Chưa có dự đoán nào. Hãy thử ngay ở tab "Phân tích"!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── TAB 6: GIỚI THIỆU ── -->
+            <section class="tab-panel" id="panel-about" role="tabpanel" hidden>
+                <div class="glass-panel about-panel">
+                    <div class="about-header">
+                        <div class="about-avatar-wrap">
+                            <img src="images/avatar.jpg" alt="Nguyễn Xuân Phúc" class="about-avatar" loading="lazy">
+                            <div class="about-avatar-ring"></div>
+                        </div>
+                        <div class="about-info">
+                            <h2 class="about-name">Nguyễn Xuân Phúc</h2>
+                            <p class="about-role">Sinh viên ngành Khoa học Dữ liệu</p>
+                            <div class="about-badges">
+                                <span class="about-badge">🎓 MSSV: 3110524025</span>
+                                <span class="about-badge">📚 Lớp: 24CKDL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-details">
+                        <div class="about-card glass-panel">
+                            <div class="about-card-icon">🏫</div>
+                            <h3>Trường & Khoa</h3>
+                            <p><strong>Trường Đại học Sư phạm</strong></p>
+                            <p>Đại học Đà Nẵng</p>
+                            <p style="margin-top:.4rem;color:var(--text-sec);font-size:.82rem;">Khoa Toán - Tin</p>
+                        </div>
+                        <div class="about-card glass-panel">
+                            <div class="about-card-icon">📖</div>
+                            <h3>Môn học</h3>
+                            <p><strong>Học máy Nâng cao</strong></p>
+                            <p style="margin-top:.4rem;color:var(--text-sec);font-size:.82rem;">Advanced Machine Learning</p>
+                        </div>
+                        <div class="about-card glass-panel">
+                            <div class="about-card-icon">👨‍🏫</div>
+                            <h3>Giảng viên hướng dẫn</h3>
+                            <p><strong>TS. Phan Trần Đức Minh</strong></p>
+                            <p style="margin-top:.4rem;color:var(--text-sec);font-size:.82rem;">Khoa Toán - Tin, Trường ĐHSP Đà Nẵng</p>
+                        </div>
+                        <div class="about-card glass-panel">
+                            <div class="about-card-icon">🔗</div>
+                            <h3>Liên kết</h3>
+                            <div class="about-links">
+                                <a href="https://github.com/NguyenPhuc-05" target="_blank" rel="noopener" class="about-link">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.7.82.58C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                                    GitHub
+                                </a>
+                                <a href="https://www.linkedin.com/in/xu%C3%A2n-ph%C3%BAc-nguy%E1%BB%85n-a7a538274" target="_blank" rel="noopener" class="about-link">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 110-4.13 2.07 2.07 0 010 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.23 0z"/></svg>
+                                    LinkedIn
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-project glass-panel">
+                        <h3 class="sec-title">🌸 Về Dự án này</h3>
+                        <p style="font-size:.85rem;color:var(--text-sec);line-height:1.7;">
+                            <strong>Iris AI Explorer</strong> là đồ án môn học <em>Học máy Nâng cao</em>, xây dựng ứng dụng web tương tác
+                            để phân loại 3 loài hoa Iris (Setosa, Versicolor, Virginica) sử dụng thuật toán <strong>Support Vector Machine (SVM)</strong>
+                            với 4 phiên bản kernel khác nhau. Dự án bao gồm Backend API (FastAPI + SQLite), Frontend tương tác (Vanilla JavaScript),
+                            và hệ thống trực quan hóa Decision Boundary, biểu đồ Radar, Scatter Plot.
+                        </p>
+                        <div class="tech-stack">
+                            <span class="tech-tag">FastAPI</span>
+                            <span class="tech-tag">scikit-learn</span>
+                            <span class="tech-tag">SVM</span>
+                            <span class="tech-tag">SQLite</span>
+                            <span class="tech-tag">JavaScript</span>
+                            <span class="tech-tag">Canvas API</span>
+                            <span class="tech-tag">Render</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -405,7 +537,7 @@
 
         <!-- FOOTER -->
         <footer class="app-footer glass-panel">
-            <p>Đồ án Học máy Nâng cao • 2026 — FastAPI, SVM & Vanilla JavaScript</p>
+            <p>Đồ án Học máy Nâng cao • 2026 — Nguyễn Xuân Phúc • GVHD: TS. Phan Trần Đức Minh</p>
         </footer>
     </div>
 

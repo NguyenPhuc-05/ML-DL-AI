@@ -1,6 +1,6 @@
 {
-  "model_name": "iris-svm-rbf",
-  "model_version": "1.0.0",
+  "project": "iris-svm-multikernel",
+  "model_version": "2.0.0",
   "feature_names": [
     "sepal length (cm)",
     "sepal width (cm)",
@@ -12,9 +12,41 @@
     "1": "versicolor",
     "2": "virginica"
   },
-  "kernel": "rbf",
-  "cv_accuracy_mean": 0.9666666666666668,
-  "cv_accuracy_std": 0.029814239699997188,
+  "models": [
+    {
+      "version": "v1",
+      "kernel": "linear",
+      "display_name": "Linear (Tuyến tính)",
+      "cv_accuracy_mean": 0.9666666666666666,
+      "cv_accuracy_std": 0.05163977794943222,
+      "model_file": "iris_svm_linear.joblib"
+    },
+    {
+      "version": "v2",
+      "kernel": "rbf",
+      "display_name": "RBF (Radial Basis Function)",
+      "cv_accuracy_mean": 0.96,
+      "cv_accuracy_std": 0.038873012632301994,
+      "model_file": "iris_svm_rbf.joblib"
+    },
+    {
+      "version": "v3",
+      "kernel": "poly",
+      "display_name": "Polynomial (Đa thức)",
+      "cv_accuracy_mean": 0.9066666666666666,
+      "cv_accuracy_std": 0.04898979485566355,
+      "model_file": "iris_svm_poly.joblib"
+    },
+    {
+      "version": "v4",
+      "kernel": "sigmoid",
+      "display_name": "Sigmoid",
+      "cv_accuracy_mean": 0.9133333333333333,
+      "cv_accuracy_std": 0.04521553322083511,
+      "model_file": "iris_svm_sigmoid.joblib"
+    }
+  ],
+  "default_kernel": "rbf",
   "sklearn_version": "1.9.1",
   "warning": "Educational use only. Predictions are demonstrations, not scientific identification."
 }
