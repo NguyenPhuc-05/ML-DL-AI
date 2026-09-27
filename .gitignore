@@ -28,3 +28,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Databases
+*.db
+*.sqlite3
+

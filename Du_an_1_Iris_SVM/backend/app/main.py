@@ -146,6 +146,7 @@ def home():
 def health():
     return {
         "status": "ok",
+        "model_loaded": len(models) > 0,
         "models_loaded": list(models.keys()),
         "model_version": metadata["model_version"],
     }
@@ -288,6 +289,18 @@ def export_predictions():
     )
 
 
+FEATURE_NAME_MAP = {
+    "sepal_length": 0,
+    "sepal_width": 1,
+    "petal_length": 2,
+    "petal_width": 3,
+    "sepal length (cm)": 0,
+    "sepal width (cm)": 1,
+    "petal length (cm)": 2,
+    "petal width (cm)": 3,
+}
+
+
 @app.get("/decision-boundary")
 def decision_boundary(
     kernel: str = Query(default="rbf", pattern="^(linear|rbf|poly|sigmoid)$"),
@@ -302,11 +315,9 @@ def decision_boundary(
     if kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
 
-    feature_names = metadata["feature_names"]
-    try:
-        idx_x = feature_names.index(feature_x)
-        idx_y = feature_names.index(feature_y)
-    except ValueError:
+    idx_x = FEATURE_NAME_MAP.get(feature_x)
+    idx_y = FEATURE_NAME_MAP.get(feature_y)
+    if idx_x is None or idx_y is None:
         raise HTTPException(status_code=400, detail="Invalid feature name")
 
     from sklearn import datasets
