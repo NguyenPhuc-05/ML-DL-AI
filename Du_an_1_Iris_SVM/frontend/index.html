@@ -178,34 +178,107 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ── XAI: EXPLAINABLE AI PANEL ── -->
+                <div class="glass-panel xai-panel" id="xai-panel" hidden>
+                    <div class="xai-header">
+                        <h3 class="sec-title" style="margin-bottom:0.2rem;">🔍 XAI — Giải thích quyết định phân loại (Explainable AI)</h3>
+                        <span class="xai-badge" id="xai-method">Feature Sensitivity Attribution</span>
+                    </div>
+                    <p class="sec-desc">Định lượng mức độ ảnh hưởng của từng đặc trưng đến kết quả dự đoán của mô hình SVM.</p>
+                    <div class="xai-bars" id="xai-bars"></div>
+                    <div class="xai-summary" id="xai-summary">
+                        <p id="xai-summary-text" style="margin:0;"></p>
+                    </div>
+                </div>
             </section>
 
             <!-- ── TAB 2: DỮ LIỆU ── -->
             <section class="tab-panel" id="panel-data" role="tabpanel" hidden>
                 <div class="glass-panel">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
-                        <h2 class="sec-title" style="margin-bottom:0;">📈 Bản đồ 150 mẫu Iris</h2>
-                        <div style="display:flex;align-items:center;gap:.5rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem;">
+                        <h2 class="sec-title" style="margin-bottom:0;">📈 Bản đồ 150 mẫu Iris & Vùng quyết định</h2>
+                        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
                             <label for="boundary-kernel" style="font-size:.8rem;color:var(--text-sec);font-weight:600;">Decision Boundary:</label>
-                            <select id="boundary-kernel" class="kernel-select" style="min-width:120px;">
+                            <select id="boundary-kernel" class="kernel-select" style="min-width:110px;">
                                 <option value="">Ẩn</option>
                                 <option value="linear">Linear</option>
-                                <option value="rbf">RBF</option>
+                                <option value="rbf" selected>RBF</option>
                                 <option value="poly">Poly</option>
                                 <option value="sigmoid">Sigmoid</option>
                             </select>
+                            <label class="sv-toggle-label" style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:600;cursor:pointer;">
+                                <input type="checkbox" id="toggle-support-vectors" checked> ⚡ Hiện Support Vectors
+                            </label>
                         </div>
                     </div>
-                    <p class="sec-desc">Trục X: Petal Length — Trục Y: Petal Width. Điểm ⭐ = Dữ liệu bạn nhập. Vùng màu = Decision Boundary.</p>
-                    <div class="scatter-wrap"><canvas id="scatter-canvas" width="800" height="420"></canvas></div>
+                    <div class="sv-stats-bar" id="sv-stats-bar" style="margin-bottom:.5rem;font-size:.78rem;color:var(--c4);font-weight:600;">
+                        <!-- e.g. "⚡ Đang hiển thị 51 Support Vectors: Setosa (8) | Versicolor (22) | Virginica (21)" -->
+                    </div>
+                    <p class="sec-desc">Trục X: Petal Length — Trục Y: Petal Width. Điểm ⭐ = Dữ liệu bạn chọn. Vùng màu = Decision Boundary. <span style="color:var(--c4);font-weight:600;">💡 Mẹo: Bấm chuột trực tiếp lên đồ thị để 'thả' điểm hoa mới vào!</span></p>
+                    <div class="scatter-wrap" style="position:relative;">
+                        <canvas id="scatter-canvas" width="800" height="420" style="cursor:crosshair;"></canvas>
+                        <div id="canvas-tooltip" class="canvas-tooltip" hidden></div>
+                    </div>
                     <div class="legend">
                         <span class="legend-item"><span class="ldot" style="background:#fb7185"></span> Setosa</span>
                         <span class="legend-item"><span class="ldot" style="background:#a78bfa"></span> Versicolor</span>
                         <span class="legend-item"><span class="ldot" style="background:#38bdf8"></span> Virginica</span>
-                        <span class="legend-item">⭐ Bạn</span>
+                        <span class="legend-item"><span class="ldot-sv"></span> Support Vector</span>
+                        <span class="legend-item">⭐ Bạn chọn</span>
                     </div>
                 </div>
-                <div class="glass-panel dataset-info">
+
+                <!-- ── SVM LIVE PLAYGROUND ── -->
+                <div class="glass-panel svm-playground-panel" id="svm-playground-panel">
+                    <div class="pg-header">
+                        <div>
+                            <h2 class="sec-title" style="margin-bottom:0.2rem;">🎛️ Phòng Thí nghiệm Siêu tham số (Live SVM Playground)</h2>
+                            <p class="sec-desc" style="margin-bottom:0;">Thử nghiệm thay đổi siêu tham số toán học để quan sát trực tiếp hiện tượng <strong>Overfitting (Quá khớp)</strong> và <strong>Underfitting (Dưới khớp)</strong> theo thời gian thực.</p>
+                        </div>
+                        <span class="xai-badge">Học máy Nâng cao</span>
+                    </div>
+
+                    <div class="pg-controls-grid">
+                        <div class="pg-control">
+                            <div class="pg-label-row">
+                                <label for="pg-param-c">Tham số phạt C (Regularization):</label>
+                                <span class="pg-val" id="pg-c-val">1.0</span>
+                            </div>
+                            <input type="range" id="pg-param-c" class="ios-slider" min="-2" max="2" step="0.2" value="0">
+                            <div class="slider-range"><span>0.01 (Soft Margin)</span><span>1.0</span><span>100 (Hard Margin)</span></div>
+                        </div>
+
+                        <div class="pg-control" id="pg-gamma-wrap">
+                            <div class="pg-label-row">
+                                <label for="pg-param-gamma">Tham số bán kính γ (Gamma RBF):</label>
+                                <span class="pg-val" id="pg-gamma-val">1.0</span>
+                            </div>
+                            <input type="range" id="pg-param-gamma" class="ios-slider" min="-2" max="1.3" step="0.1" value="0">
+                            <div class="slider-range"><span>0.01 (Mịn/Bao quát)</span><span>1.0</span><span>20 (Ốc đảo / Overfit)</span></div>
+                        </div>
+
+                        <div class="pg-control" id="pg-degree-wrap" style="display:none;">
+                            <div class="pg-label-row">
+                                <label for="pg-param-degree">Bậc đa thức (Degree d):</label>
+                                <span class="pg-val" id="pg-degree-val">3</span>
+                            </div>
+                            <input type="range" id="pg-param-degree" class="ios-slider" min="1" max="5" step="1" value="3">
+                            <div class="slider-range"><span>1 (Tuyến tính)</span><span>3</span><span>5 (Uốn lượn cao)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="pg-diagnosis-box" id="pg-diagnosis-box">
+                        <div class="pg-diag-meta">
+                            <span id="pg-diag-acc">Accuracy: 96.0%</span>
+                            <span id="pg-diag-sv">Support Vectors: 51</span>
+                            <span id="pg-diag-speed" style="color:var(--text-sec);font-weight:normal;">⚡ Tính toán trong 2ms</span>
+                        </div>
+                        <p id="pg-diag-text" class="pg-diag-text">Đang kết nối phòng thí nghiệm...</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel dataset-info" style="margin-top:1.2rem;">
                     <h2 class="sec-title">📋 Thông tin Dataset</h2>
                     <div class="info-grid">
                         <div class="info-card"><div class="info-num" data-count="150">0</div><div class="info-label">Mẫu dữ liệu</div></div>
@@ -434,11 +507,61 @@
                             </ul>
                         </div>
                     </div>
+
+                    <!-- Step 6: Kernel Arena -->
+                    <div class="svm-step arena-step" style="border-top:1px solid var(--glass-border);padding-top:1.5rem;margin-top:1.5rem;">
+                        <div class="svm-step-num">06</div>
+                        <div class="svm-step-body" style="width:100%;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
+                                <div>
+                                    <h3 style="margin-bottom:0.2rem;">⚔️ Đấu trường 4 Kernel (Kernel Arena Benchmark)</h3>
+                                    <p style="margin:0;font-size:.82rem;color:var(--text-sec);">So sánh song song 4 mô hình SVM theo thời gian thực: Độ chính xác, Thời gian suy luận (Latency), Số lượng Support Vectors và Bề mặt quyết định.</p>
+                                </div>
+                                <button class="action-btn ripple-btn" id="arena-refresh-btn" style="font-size:.78rem;padding:.35rem .7rem;">⚡ Chạy Benchmark lại</button>
+                            </div>
+                            <div class="arena-grid" id="arena-grid">
+                                <div class="arena-loading" style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-sec);">Đang tải dữ liệu đấu trường...</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
             <!-- ── TAB 5: LỊCH SỬ ── -->
             <section class="tab-panel" id="panel-history" role="tabpanel" hidden>
+                <!-- BATCH PREDICTION PANEL -->
+                <div class="glass-panel batch-panel" style="margin-bottom:1.2rem;">
+                    <div class="hist-header">
+                        <div>
+                            <h2 class="sec-title" style="margin-bottom:0.2rem;">📁 Phân loại Hàng loạt (Batch CSV Prediction)</h2>
+                            <p class="sec-desc" style="margin-bottom:0;">Tải file CSV chứa danh sách mẫu hoa để dự đoán đồng loạt trong 0.1 giây.</p>
+                        </div>
+                        <div class="hist-actions">
+                            <a href="#" id="download-sample-csv" class="action-btn ripple-btn" style="text-decoration:none;">📄 Tải CSV Mẫu</a>
+                        </div>
+                    </div>
+                    <div class="dropzone" id="csv-dropzone">
+                        <input type="file" id="csv-file-input" accept=".csv" style="display:none;">
+                        <div class="dropzone-content">
+                            <span class="dropzone-icon">📥</span>
+                            <p><strong>Kéo thả file .CSV vào đây</strong> hoặc <span class="browse-link">chọn từ máy tính</span></p>
+                            <span class="dropzone-hint">Định dạng: sepal_length, sepal_width, petal_length, petal_width, kernel (tùy chọn)</span>
+                        </div>
+                    </div>
+                    <div id="batch-results-wrap" style="display:none;margin-top:1rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                            <span id="batch-count-badge" class="badge-tag">Đã phân loại 10 mẫu</span>
+                            <button id="batch-export-btn" class="action-btn ripple-btn">📥 Tải kết quả (CSV)</button>
+                        </div>
+                        <div class="hist-table-wrap">
+                            <table class="hist-table" id="batch-table">
+                                <thead><tr><th>#</th><th>SL</th><th>SW</th><th>PL</th><th>PW</th><th>Kernel</th><th>Dự đoán</th><th>Độ tin cậy</th><th>Trạng thái</th></tr></thead>
+                                <tbody id="batch-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="glass-panel">
                     <div class="hist-header">
                         <h2 class="sec-title">📋 Lịch sử Dự đoán (Database)</h2>
