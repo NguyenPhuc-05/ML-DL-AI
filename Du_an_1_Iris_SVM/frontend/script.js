@@ -455,7 +455,9 @@ function drawRadar() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    const cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 36;
+    const cx = W / 2, cy = H / 2;
+    // Generous radial margin: 115px horizontally, 60px vertically
+    const R = Math.min((W - 230) / 2, (H - 120) / 2);
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     ctx.clearRect(0, 0, W, H);
@@ -464,9 +466,10 @@ function drawRadar() {
     const startAngle = -Math.PI / 2;
 
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(89,62,103,0.1)';
-    const textColor = isDark ? '#a08aaa' : '#6e5570';
+    const textColor = isDark ? '#e2d4e0' : '#4a2c4e';
+    const valColor = '#fea837';
 
-    // Concentric grid rings
+    // Concentric grid rings (25%, 50%, 75%, 100%)
     for (let ring = 1; ring <= 4; ring++) {
         const r = (R / 4) * ring;
         ctx.beginPath();
@@ -482,7 +485,7 @@ function drawRadar() {
         ctx.stroke();
     }
 
-    // Axes
+    // Radial Axes
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
         ctx.beginPath();
@@ -501,35 +504,54 @@ function drawRadar() {
         return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
     });
 
+    // Fill & stroke polygon
     ctx.beginPath();
     pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
     ctx.closePath();
-    ctx.fillStyle = isDark ? 'rgba(186,134,166,0.3)' : 'rgba(89,62,103,0.2)';
+    ctx.fillStyle = isDark ? 'rgba(186,134,166,0.32)' : 'rgba(89,62,103,0.2)';
     ctx.fill();
-    ctx.strokeStyle = isDark ? '#ba86a6' : '#593e67';
+    ctx.strokeStyle = isDark ? '#fea837' : '#593e67';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // Data points
+    // Data points on vertices
     pts.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
-        ctx.fillStyle = isDark ? '#e2d4e0' : '#8c6d88';
+        ctx.fillStyle = '#fea837';
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1.5;
         ctx.stroke();
     });
 
-    // Labels
-    ctx.font = '600 10.5px Inter, sans-serif';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    const labels = ['Sepal L.', 'Sepal W.', 'Petal L.', 'Petal W.'];
+    // Informative labels & live values with smart alignment
+    const meta = [
+        { label: 'Sepal Length (Dài đài)', align: 'center', dx: 0, dy: -24, valDy: -10 },
+        { label: 'Sepal Width (Rộng đài)', align: 'left',   dx: 14, dy: -6,  valDy: 9 },
+        { label: 'Petal Length (Dài cánh)', align: 'center', dx: 0, dy: 16,  valDy: 30 },
+        { label: 'Petal Width (Rộng cánh)', align: 'right',  dx: -14, dy: -6, valDy: 9 }
+    ];
+
     for (let i = 0; i < n; i++) {
         const angle = startAngle + i * angleStep;
-        const lR = R + 18;
-        ctx.fillText(labels[i], cx + lR * Math.cos(angle), cy + lR * Math.sin(angle) + 4);
+        const vx = cx + R * Math.cos(angle);
+        const vy = cy + R * Math.sin(angle);
+        const m = meta[i];
+        const f = FEATURES[i];
+        const curVal = (vals[f.api] !== undefined ? vals[f.api] : f.min).toFixed(1);
+
+        ctx.textAlign = m.align;
+
+        // Label name
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.fillStyle = textColor;
+        ctx.fillText(m.label, vx + m.dx, vy + m.dy);
+
+        // Value text
+        ctx.font = '700 11.5px Inter, sans-serif';
+        ctx.fillStyle = valColor;
+        ctx.fillText(`${curVal} cm`, vx + m.dx, vy + m.valDy);
     }
 }
 

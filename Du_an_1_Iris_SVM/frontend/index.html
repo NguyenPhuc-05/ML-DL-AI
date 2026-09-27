@@ -28,7 +28,30 @@
         <!-- ===== TOP HEADER ===== -->
         <header class="top-header glass-panel">
             <div class="header-brand">
-                <span class="logo-icon">🌸</span>
+                <div class="logo-badge" title="Iris AI Explorer — SVM Multi-Kernel">
+                    <svg class="tech-logo" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="logo-poly-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#fea837"/>
+                                <stop offset="50%" stop-color="#ba86a6"/>
+                                <stop offset="100%" stop-color="#593e67"/>
+                            </linearGradient>
+                            <linearGradient id="logo-hyperplane" x1="0%" y1="100%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#38bdf8"/>
+                                <stop offset="100%" stop-color="#fb7185"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Convex Polytope Shell (SVM Margin boundary) -->
+                        <polygon points="22,3 39,12 39,32 22,41 5,32 5,12" stroke="url(#logo-poly-grad)" stroke-width="2.2" fill="rgba(89,62,103,0.2)" stroke-linejoin="round"/>
+                        <!-- Inner Hyperplane separating space -->
+                        <line x1="8" y1="31" x2="36" y2="13" stroke="url(#logo-hyperplane)" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="12" y1="36" x2="32" y2="8" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" stroke-dasharray="2,2"/>
+                        <!-- Support Vector Nodes (Classes 0, 1, 2) -->
+                        <circle cx="15" cy="18" r="3.2" fill="#fb7185"/>
+                        <circle cx="29" cy="26" r="3.2" fill="#38bdf8"/>
+                        <circle cx="22" cy="22" r="4.2" fill="#fea837" stroke="#ffffff" stroke-width="1.5"/>
+                    </svg>
+                </div>
                 <div>
                     <h1>Iris AI Explorer</h1>
                     <p class="subtitle">Khám phá & Dự đoán loài hoa bằng SVM đa nhân</p>
@@ -68,7 +91,7 @@
 
                         <!-- Kernel Selector -->
                         <div class="kernel-selector">
-                            <label for="kernel-select" class="kernel-label">🔧 Chọn nhân SVM (Kernel):</label>
+                            <label for="kernel-select" class="kernel-select-label">🔧 Chọn nhân SVM (Kernel):</label>
                             <select id="kernel-select" class="kernel-select">
                                 <option value="linear">v1 — Linear (Tuyến tính)</option>
                                 <option value="rbf" selected>v2 — RBF (Radial Basis Function)</option>
@@ -130,7 +153,7 @@
                     <!-- Right: Radar -->
                     <div class="glass-panel chart-panel">
                         <h2 class="sec-title">📊 Biểu đồ Radar</h2>
-                        <canvas id="radar-canvas" width="320" height="320"></canvas>
+                        <canvas id="radar-canvas" width="480" height="380"></canvas>
                     </div>
                 </div>
 
@@ -434,11 +457,15 @@
                             <p>Nhưng nếu đường kẻ nằm <strong>chính giữa</strong> với khoảng cách đều nhau về hai phía, thì cả hai đội đều có "vùng đệm" an toàn → mô hình <strong>tổng quát hóa tốt hơn</strong> trên dữ liệu mới chưa thấy bao giờ.</p>
                             <div class="margin-compare">
                                 <div class="margin-box bad">
-                                    <div class="margin-line bad-line"></div>
+                                    <div class="margin-line-area">
+                                        <div class="margin-line bad-line"></div>
+                                    </div>
                                     <span>❌ Margin nhỏ → Dễ sai</span>
                                 </div>
                                 <div class="margin-box good">
-                                    <div class="margin-line good-line"></div>
+                                    <div class="margin-line-area">
+                                        <div class="margin-line good-line"></div>
+                                    </div>
                                     <span>✅ Margin lớn → Tổng quát tốt</span>
                                 </div>
                             </div>
@@ -454,7 +481,7 @@
                             <p>Kernel Trick giải quyết vấn đề này bằng cách <strong>"chiếu" dữ liệu</strong> từ không gian 2D lên không gian chiều cao hơn (3D, 4D,...). Trong không gian mới, dữ liệu bỗng trở nên phân tách được!</p>
                             <div class="kernel-demo">
                                 <div class="kernel-stage before">
-                                    <span class="kernel-label">2D — Không phân tách được</span>
+                                    <span class="stage-label">2D — Không phân tách được</span>
                                     <div class="k-dot a" style="top:45%;left:30%"></div>
                                     <div class="k-dot b" style="top:45%;left:50%"></div>
                                     <div class="k-dot a" style="top:45%;left:70%"></div>
@@ -464,7 +491,7 @@
                                 </div>
                                 <div class="kernel-arrow">→ Kernel RBF →</div>
                                 <div class="kernel-stage after">
-                                    <span class="kernel-label">Chiều cao hơn — Phân tách được!</span>
+                                    <span class="stage-label">Chiều cao hơn — Phân tách được!</span>
                                     <div class="k-dot a" style="top:70%;left:20%"></div>
                                     <div class="k-dot b" style="top:25%;left:40%"></div>
                                     <div class="k-dot a" style="top:75%;left:60%"></div>
