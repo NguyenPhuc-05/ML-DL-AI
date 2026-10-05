@@ -419,6 +419,13 @@ async function doPredict() {
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
+            if (res.status === 401) {
+                alert("Phiên đăng nhập đã hết hạn hoặc tài khoản không tồn tại. Vui lòng đăng nhập lại.");
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+                return;
+            }
             throw new Error(err.detail || `Lỗi ${res.status}`);
         }
 
