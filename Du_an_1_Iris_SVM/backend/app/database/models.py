@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from database.db import Base, engine
+from app.database.db import Base, engine
 
 class User(Base):
     """

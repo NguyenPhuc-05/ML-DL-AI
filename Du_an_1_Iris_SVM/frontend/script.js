@@ -91,13 +91,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoginMode = true;
 
     function checkAuth() {
+        const appContainer = document.getElementById('app-container');
         if (!authToken) {
             authOverlay.classList.remove('hidden');
-            userBadge.hidden = true;
+            if (appContainer) appContainer.style.display = 'none';
         } else {
             authOverlay.classList.add('hidden');
-            userBadge.hidden = false;
-            navUsername.textContent = currentUsername;
+            if (appContainer) appContainer.style.display = 'block';
+            if (userBadge) userBadge.hidden = false;
+            if (navUsername) navUsername.textContent = currentUsername;
             loadHistoryFromDB();
         }
     }
