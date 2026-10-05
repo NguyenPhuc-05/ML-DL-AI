@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: iris-svm-backend
+    name: iris-svm-api
     env: python
     rootDir: Du_an_1_Iris_SVM
     buildCommand: pip install -r backend/requirements.txt
