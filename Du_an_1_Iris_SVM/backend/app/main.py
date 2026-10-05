@@ -26,8 +26,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
-from app.database.db import get_db_session
-from app.database.models import PredictionRecord as DBPredictionRecord, User
+from database.db import get_db_session
+from database.models import PredictionRecord as DBPredictionRecord, User
 
 import jwt
 from passlib.context import CryptContext
