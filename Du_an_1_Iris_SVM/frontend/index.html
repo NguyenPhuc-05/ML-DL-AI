@@ -42,14 +42,7 @@
                             </linearGradient>
                         </defs>
                         <!-- Convex Polytope Shell (SVM Margin boundary) -->
-                        <polygon points="22,3 39,12 39,32 22,41 5,32 5,12" stroke="url(#logo-poly-grad)" stroke-width="2.2" fill="rgba(89,62,103,0.2)" stroke-linejoin="round"/>
-                        <!-- Inner Hyperplane separating space -->
-                        <line x1="8" y1="31" x2="36" y2="13" stroke="url(#logo-hyperplane)" stroke-width="2.5" stroke-linecap="round"/>
-                        <line x1="12" y1="36" x2="32" y2="8" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" stroke-dasharray="2,2"/>
-                        <!-- Support Vector Nodes (Classes 0, 1, 2) -->
-                        <circle cx="15" cy="18" r="3.2" fill="#fb7185"/>
-                        <circle cx="29" cy="26" r="3.2" fill="#38bdf8"/>
-                        <circle cx="22" cy="22" r="4.2" fill="#fea837" stroke="#ffffff" stroke-width="1.5"/>
+                        <img src="images/tech_logo.jpg" class="tech-logo" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; transform: scale(1.15);">
                     </svg>
                 </div>
                 <div>
@@ -151,9 +144,9 @@
                     </div>
 
                     <!-- Right: Radar -->
-                    <div class="glass-panel chart-panel">
+                    <div class="glass-panel chart-panel" style="overflow: visible;">
                         <h2 class="sec-title">📊 Biểu đồ Radar</h2>
-                        <canvas id="radar-canvas" width="480" height="380"></canvas>
+                        <canvas id="radar-canvas" width="560" height="380"></canvas>
                     </div>
                 </div>
 
@@ -163,16 +156,19 @@
                         <img src="images/setosa.jpg" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg';" alt="Iris Setosa" class="sp-img" loading="lazy">
                         <h3>🌸 Setosa</h3>
                         <p class="sp-trait">Cánh hoa rất ngắn & nhỏ</p>
+                        <div class="prob-badge" id="prob-setosa"></div>
                     </div>
                     <div class="glass-panel species-card magnetic-card" data-species="versicolor" id="card-versicolor">
                         <img src="images/versicolor.jpg" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg';" alt="Iris Versicolor" class="sp-img" loading="lazy">
                         <h3>🌺 Versicolor</h3>
                         <p class="sp-trait">Kích thước trung bình</p>
+                        <div class="prob-badge" id="prob-versicolor"></div>
                     </div>
                     <div class="glass-panel species-card magnetic-card" data-species="virginica" id="card-virginica">
                         <img src="images/virginica.jpg" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg';" alt="Iris Virginica" class="sp-img" loading="lazy">
                         <h3>💐 Virginica</h3>
                         <p class="sp-trait">Kích thước lớn nhất</p>
+                        <div class="prob-badge" id="prob-virginica"></div>
                     </div>
                 </div>
 
@@ -667,17 +663,17 @@
                         <p style="font-size:.85rem;color:var(--text-sec);line-height:1.7;">
                             <strong>Iris AI Explorer</strong> là đồ án môn học <em>Học máy Nâng cao</em>, xây dựng ứng dụng web tương tác
                             để phân loại 3 loài hoa Iris (Setosa, Versicolor, Virginica) sử dụng thuật toán <strong>Support Vector Machine (SVM)</strong>
-                            với 4 phiên bản kernel khác nhau. Dự án bao gồm Backend API (FastAPI + SQLite), Frontend tương tác (Vanilla JavaScript),
+                            với 4 phiên bản kernel khác nhau. Dự án bao gồm Backend API (FastAPI + MySQL), Frontend tương tác (Vanilla JavaScript),
                             và hệ thống trực quan hóa Decision Boundary, biểu đồ Radar, Scatter Plot.
                         </p>
                         <div class="tech-stack">
                             <span class="tech-tag">FastAPI</span>
                             <span class="tech-tag">scikit-learn</span>
                             <span class="tech-tag">SVM</span>
-                            <span class="tech-tag">SQLite</span>
+                            <span class="tech-tag">SQLAlchemy</span>
+                            <span class="tech-tag">MySQL</span>
                             <span class="tech-tag">JavaScript</span>
                             <span class="tech-tag">Canvas API</span>
-                            <span class="tech-tag">Render</span>
                         </div>
                     </div>
                 </div>

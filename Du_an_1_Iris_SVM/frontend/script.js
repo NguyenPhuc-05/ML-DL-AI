@@ -401,11 +401,15 @@ function showBotanical(species, prob, kernel) {
     const imgEl = document.getElementById('bot-img');
     if (imgEl && b.image) {
         imgEl.onerror = function() {
-            if (b.fallback && this.src !== b.fallback) this.src = b.fallback;
+            if (b.fallback && this.src !== b.fallback) {
+                this.src = b.fallback;
+            }
         };
         imgEl.src = b.image;
         imgEl.alt = b.name;
     }
+    
+    panel.style.display = 'block';
 
     const setText = (id, txt) => {
         const el = document.getElementById(id);
@@ -444,8 +448,8 @@ function drawRadar() {
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const cx = W / 2, cy = H / 2;
-    // Generous radial margin: 115px horizontally, 60px vertically
-    const R = Math.min((W - 230) / 2, (H - 120) / 2);
+    // Generous radial margin
+    const R = Math.min((W - 280) / 2, (H - 120) / 2);
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
     ctx.clearRect(0, 0, W, H);

@@ -16,10 +16,18 @@ Features:
 import io
 import json
 import os
-import sqlite3
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Thêm root directory vào sys.path để import được module database độc lập
+BASE_DIR = Path(__file__).resolve().parents[2]
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
+
+from database.db import get_db_session
+from database.models import PredictionRecord as DBPredictionRecord
 
 import joblib
 import numpy as np
@@ -38,11 +46,9 @@ X_iris = iris_dataset.data
 y_iris = iris_dataset.target
 IRIS_MEDIANS = np.median(X_iris, axis=0)
 
-# ─── Paths ───
 BASE_DIR = Path(__file__).resolve().parents[1]
 ARTIFACT_DIR = BASE_DIR / "artifacts"
 METADATA_PATH = ARTIFACT_DIR / "metadata.json"
-DB_PATH = BASE_DIR / "data" / "predictions.db"
 
 # ─── Load metadata & models ───
 metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
@@ -50,37 +56,7 @@ models = {m["kernel"]: joblib.load(ARTIFACT_DIR / m["model_file"]) for m in meta
 DEFAULT_KERNEL = metadata.get("default_kernel", "rbf")
 
 
-# ─── Database setup ───
-def init_db():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(str(DB_PATH)) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS user_predictions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sepal_length REAL NOT NULL,
-                sepal_width REAL NOT NULL,
-                petal_length REAL NOT NULL,
-                petal_width REAL NOT NULL,
-                kernel TEXT NOT NULL,
-                prediction TEXT NOT NULL,
-                class_id INTEGER NOT NULL,
-                probability REAL NOT NULL,
-                model_version TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
 
-
-init_db()
-
-
-def get_db():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-# ─── CORS ───
 def configured_origins() -> list[str]:
     default_origins = [
         "https://iris-svm-frontend-6s3t.onrender.com",
@@ -200,15 +176,26 @@ def predict(data: IrisInput):
     probability = float(probs[prediction_idx])
     now = datetime.now(timezone.utc).isoformat()
 
-    with get_db() as conn:
-        cursor = conn.execute(
-            """INSERT INTO user_predictions
-               (sepal_length, sepal_width, petal_length, petal_width, kernel, prediction, class_id, probability, model_version, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (data.sepal_length, data.sepal_width, data.petal_length, data.petal_width,
-             data.kernel, label, prediction_idx, probability, metadata["model_version"], now),
+    db = next(get_db_session())
+    try:
+        new_record = DBPredictionRecord(
+            sepal_length=data.sepal_length,
+            sepal_width=data.sepal_width,
+            petal_length=data.petal_length,
+            petal_width=data.petal_width,
+            kernel=data.kernel,
+            prediction=label,
+            class_id=prediction_idx,
+            probability=probability,
+            model_version=metadata["model_version"],
+            created_at=now
         )
-        record_id = cursor.lastrowid
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+        record_id = new_record.id
+    finally:
+        db.close()
 
     return IrisPrediction(
         id=record_id,
@@ -223,17 +210,33 @@ def predict(data: IrisInput):
 @app.get("/predictions", response_model=list[PredictionRecord])
 def get_predictions(limit: int = Query(default=50, le=500)):
     """Get prediction history from database."""
-    with get_db() as conn:
-        rows = conn.execute("SELECT * FROM user_predictions ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-    return [dict(row) for row in rows]
+    db = next(get_db_session())
+    try:
+        rows = db.query(DBPredictionRecord).order_by(DBPredictionRecord.id.desc()).limit(limit).all()
+        return [
+            {
+                "id": r.id, "sepal_length": r.sepal_length, "sepal_width": r.sepal_width,
+                "petal_length": r.petal_length, "petal_width": r.petal_width,
+                "kernel": r.kernel, "prediction": r.prediction, "class_id": r.class_id,
+                "probability": r.probability, "model_version": r.model_version,
+                "created_at": r.created_at
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
 
 
 @app.delete("/predictions")
 def clear_predictions():
     """Clear all prediction history."""
-    with get_db() as conn:
-        conn.execute("DELETE FROM user_predictions")
-    return {"status": "cleared"}
+    db = next(get_db_session())
+    try:
+        db.query(DBPredictionRecord).delete()
+        db.commit()
+        return {"status": "cleared"}
+    finally:
+        db.close()
 
 
 @app.get("/predictions/export")
@@ -245,8 +248,11 @@ def export_predictions():
     except ImportError:
         raise HTTPException(status_code=500, detail="openpyxl not installed")
 
-    with get_db() as conn:
-        rows = conn.execute("SELECT * FROM user_predictions ORDER BY id DESC").fetchall()
+    db = next(get_db_session())
+    try:
+        rows = db.query(DBPredictionRecord).order_by(DBPredictionRecord.id.desc()).all()
+    finally:
+        db.close()
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -263,9 +269,9 @@ def export_predictions():
 
     for r in rows:
         ws.append([
-            r["id"], r["sepal_length"], r["sepal_width"], r["petal_length"], r["petal_width"],
-            r["kernel"], r["prediction"], r["class_id"], round(r["probability"] * 100, 1),
-            r["model_version"], r["created_at"],
+            r.id, r.sepal_length, r.sepal_width, r.petal_length, r.petal_width,
+            r.kernel, r.prediction, r.class_id, round(r.probability * 100, 1),
+            r.model_version, r.created_at,
         ])
 
     for col in ws.columns:

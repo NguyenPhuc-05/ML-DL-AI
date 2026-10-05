@@ -115,8 +115,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 .sec-desc{font-size:.83rem;color:var(--text-sec);margin-bottom:1.25rem;}
 
 /* ─── Predict Grid ─── */
-.predict-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:1.5rem;margin-bottom:1.25rem;align-items:start;}
-.chart-panel{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;}
+.predict-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:1.5rem;margin-bottom:1.25rem;align-items:start;}
+.chart-panel{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
 #radar-canvas{max-width:100%;height:auto;display:block;margin:0 auto;}
 
 /* ─── Sliders ─── */
@@ -165,6 +165,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 .sp-img{width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:.6rem;background:rgba(0,0,0,.05);}
 .species-card h3{font-size:.9rem;margin-bottom:.2rem;}
 .sp-trait{font-size:.75rem;color:var(--text-sec);}
+.prob-badge{margin-top:.4rem;font-size:.8rem;font-weight:700;color:var(--c4);opacity:0;transition:opacity .3s;}
+.prob-badge.show{opacity:1;}
 .magnetic-card{transform-style:preserve-3d;perspective:600px;}
 
 /* ─── Botanical ─── */
@@ -236,7 +238,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 
 /* Margin Compare */
 .margin-compare{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.75rem 0;}
-.margin-box{position:relative;height:115px;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-border);display:flex;flex-direction:column;justify-content:space-between;padding:.75rem;font-size:.78rem;font-weight:600;color:var(--text);overflow:hidden;}
+.margin-box{position:relative;height:140px;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-border);display:flex;flex-direction:column;justify-content:space-between;padding:.75rem;font-size:.78rem;font-weight:600;color:var(--text);overflow:hidden;}
 .margin-line-area{position:relative;flex:1;width:100%;margin-bottom:.4rem;}
 .margin-line{position:absolute;top:2px;bottom:2px;width:3px;border-radius:2px;}
 .bad-line{left:25%;background:var(--c3);box-shadow:0 0 8px rgba(206,75,108,.5);}
@@ -245,8 +247,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 
 /* Kernel Demo */
 .kernel-demo{display:flex;align-items:center;gap:.75rem;margin:.75rem 0;flex-wrap:wrap;}
-.kernel-stage{position:relative;flex:1;min-width:180px;height:125px;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-border);overflow:hidden;}
-.stage-label{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.7rem;font-weight:600;color:var(--text-sec);background:rgba(20,10,30,.7);padding:3px 6px;backdrop-filter:blur(4px);z-index:2;border-top:1px solid var(--glass-border);}
+.kernel-stage{position:relative;flex:1;min-width:180px;height:150px;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-border);overflow:hidden;}
+.stage-label{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.7rem;font-weight:600;color:var(--text-sec);background:rgba(20,10,30,.7);padding:6px;backdrop-filter:blur(4px);z-index:2;border-top:1px solid var(--glass-border);}
 [data-theme="light"] .stage-label{background:rgba(255,255,255,.8);color:var(--c1);}
 .kernel-arrow{font-size:.84rem;font-weight:700;color:var(--c4);white-space:nowrap;padding:0 .3rem;}
 .k-dot{position:absolute;width:12px;height:12px;border-radius:50%;}
