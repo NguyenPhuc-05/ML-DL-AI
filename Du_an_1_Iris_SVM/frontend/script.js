@@ -258,6 +258,8 @@ function initTabs() {
                 requestAnimationFrame(() => drawRadar());
             } else if (btn.dataset.tab === 'svm') {
                 loadKernelArena();
+            } else if (btn.dataset.tab === 'history') {
+                loadHistoryFromDB();
             }
         });
     });
@@ -439,6 +441,9 @@ async function doPredict() {
 
         // Fetch Explainable AI (XAI)
         fetchXaiExplanation(body);
+        
+        // Refresh history
+        loadHistoryFromDB();
 
     } catch (err) {
         if (errEl) {
