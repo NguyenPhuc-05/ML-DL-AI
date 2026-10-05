@@ -27,7 +27,12 @@ if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
 
 from database.db import get_db_session
-from database.models import PredictionRecord as DBPredictionRecord
+from database.models import PredictionRecord as DBPredictionRecord, User
+
+import jwt
+from passlib.context import CryptContext
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
 
 import joblib
 import numpy as np
@@ -84,7 +89,42 @@ app.add_middleware(
 )
 
 
+# ─── Auth Setup ───
+SECRET_KEY = "iris_svm_secret_key"
+ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get_db_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 # ─── Schemas ───
+class UserAuth(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    username: str
+
 class IrisInput(BaseModel):
     sepal_length: float = Field(ge=4.0, le=8.0)
     sepal_width: float = Field(ge=2.0, le=5.0)
@@ -118,6 +158,27 @@ class PredictionRecord(BaseModel):
 
 class BatchPredictRequest(BaseModel):
     samples: list[IrisInput]
+
+
+# ─── Auth Endpoints ───
+@app.post("/auth/register")
+def register(user: UserAuth, db = Depends(get_db_session)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+    hashed_password = get_password_hash(user.password)
+    new_user = User(username=user.username, password_hash=hashed_password)
+    db.add(new_user)
+    db.commit()
+    return {"msg": "Đăng ký thành công"}
+
+@app.post("/auth/login", response_model=Token)
+def login(user: UserAuth, db = Depends(get_db_session)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if not db_user or not verify_password(user.password, db_user.password_hash):
+        raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu")
+    access_token = jwt.encode({"sub": user.username}, SECRET_KEY, algorithm=ALGORITHM)
+    return {"access_token": access_token, "token_type": "bearer", "username": user.username}
 
 
 # ─── Endpoints ───
@@ -157,7 +218,7 @@ def list_models():
 
 
 @app.post("/predict", response_model=IrisPrediction)
-def predict(data: IrisInput):
+def predict(data: IrisInput, current_user: User = Depends(get_current_user)):
     """Predict iris species using selected kernel version."""
     if data.kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{data.kernel}' not available")
@@ -179,6 +240,7 @@ def predict(data: IrisInput):
     db = next(get_db_session())
     try:
         new_record = DBPredictionRecord(
+            user_id=current_user.id,
             sepal_length=data.sepal_length,
             sepal_width=data.sepal_width,
             petal_length=data.petal_length,
@@ -208,11 +270,11 @@ def predict(data: IrisInput):
 
 
 @app.get("/predictions", response_model=list[PredictionRecord])
-def get_predictions(limit: int = Query(default=50, le=500)):
+def get_predictions(limit: int = Query(default=50, le=500), current_user: User = Depends(get_current_user)):
     """Get prediction history from database."""
     db = next(get_db_session())
     try:
-        rows = db.query(DBPredictionRecord).order_by(DBPredictionRecord.id.desc()).limit(limit).all()
+        rows = db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).order_by(DBPredictionRecord.id.desc()).limit(limit).all()
         return [
             {
                 "id": r.id, "sepal_length": r.sepal_length, "sepal_width": r.sepal_width,
@@ -228,11 +290,11 @@ def get_predictions(limit: int = Query(default=50, le=500)):
 
 
 @app.delete("/predictions")
-def clear_predictions():
+def clear_predictions(current_user: User = Depends(get_current_user)):
     """Clear all prediction history."""
     db = next(get_db_session())
     try:
-        db.query(DBPredictionRecord).delete()
+        db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).delete()
         db.commit()
         return {"status": "cleared"}
     finally:
@@ -240,7 +302,7 @@ def clear_predictions():
 
 
 @app.get("/predictions/export")
-def export_predictions():
+def export_predictions(current_user: User = Depends(get_current_user)):
     """Export all predictions as Excel file (.xlsx)."""
     try:
         import openpyxl
@@ -250,7 +312,7 @@ def export_predictions():
 
     db = next(get_db_session())
     try:
-        rows = db.query(DBPredictionRecord).order_by(DBPredictionRecord.id.desc()).all()
+        rows = db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).order_by(DBPredictionRecord.id.desc()).all()
     finally:
         db.close()
 

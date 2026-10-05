@@ -687,6 +687,31 @@
         </footer>
     </div>
 
+    <!-- AUTH OVERLAY -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-modal glass-panel">
+            <h2 id="auth-title">👋 Chào mừng đến với Iris AI</h2>
+            <p class="sec-desc" style="text-align:center;">Vui lòng đăng nhập để lưu dữ liệu dự đoán</p>
+            
+            <div id="auth-error" class="error-toast" hidden></div>
+
+            <form id="auth-form">
+                <div class="input-group">
+                    <label>Tên đăng nhập</label>
+                    <input type="text" id="auth-user" required autocomplete="username" placeholder="Nhập tên đăng nhập">
+                </div>
+                <div class="input-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="auth-pass" required autocomplete="current-password" placeholder="Nhập mật khẩu">
+                </div>
+                <button type="submit" class="predict-btn ripple-btn" id="auth-submit-btn">Đăng nhập</button>
+            </form>
+            <div class="auth-switch">
+                <span id="auth-switch-text">Chưa có tài khoản?</span> <span id="auth-switch-btn" class="browse-link" style="cursor:pointer;font-weight:bold;">Đăng ký ngay</span>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
