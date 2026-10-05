@@ -2,14 +2,13 @@
 
 Monorepo này lưu các đồ án học máy theo kiến trúc tách biệt giữa quá trình huấn luyện, REST API FastAPI và giao diện web tĩnh. Mỗi dự án có thể phát triển, kiểm thử và triển khai độc lập; `render.yaml` ở thư mục gốc quản lý toàn bộ dịch vụ trên Render.
 
-> Các ứng dụng trong repository chỉ phục vụ học tập và minh họa kỹ thuật. Dự án Breast Cancer không phải thiết bị y tế và không được dùng để chẩn đoán hoặc đưa ra quyết định điều trị.
+> Các ứng dụng trong repository chỉ phục vụ học tập và minh họa kỹ thuật.
 
 ## Các dự án
 
 | Dự án | Bài toán | Mô hình | Dữ liệu | Demo |
 |---|---|---|---|---|
 | Iris SVM | Phân loại Setosa, Versicolor và Virginica từ 4 đặc trưng | SVC kernel tuyến tính | `sklearn.datasets.load_iris` | [Frontend](https://iris-svm-frontend-6s3t.onrender.com) · [API](https://iris-svm-api-yfd4.onrender.com/docs) |
-| Breast Cancer SVM | Phân loại mẫu thành malignant hoặc benign từ 30 đặc trưng | StandardScaler + SVC RBF | `sklearn.datasets.load_breast_cancer` | [Frontend](https://breast-cancer-svm-frontend.onrender.com) · [API](https://breast-cancer-svm-api.onrender.com/docs) |
 
 ## Kiến trúc
 
@@ -26,16 +25,7 @@ ML-DL-AI-DS/
 │   │   ├── tests/
 │   │   └── requirements.txt
 │   └── frontend/
-└── Du_an_2_Breast_Cancer/
-    ├── README.md
-    ├── backend/
-    │   ├── app/
-    │   ├── artifacts/
-    │   ├── scripts/
-    │   ├── tests/
-    │   └── requirements.txt
-    └── frontend/
-```
+
 
 Luồng xử lý chung:
 
@@ -58,16 +48,7 @@ python -m pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### Breast Cancer
 
-```bash
-cd Du_an_2_Breast_Cancer/backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
-python -m pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
 
 Mở frontend bằng một static server, ví dụ:
 
@@ -81,17 +62,16 @@ Khi chạy frontend trên một origin khác, đặt biến môi trường `FRON
 
 ```bash
 cd Du_an_1_Iris_SVM/backend && python -m pytest -q
-cd ../../Du_an_2_Breast_Cancer/backend && python -m pytest -q
 ```
 
-GitHub Actions tự động kiểm tra hai backend và cú pháp JavaScript cho mọi pull request vào `main`.
+GitHub Actions tự động kiểm tra backend và cú pháp JavaScript cho mọi pull request vào `main`.
 
 ## Triển khai
 
 [`render.yaml`](render.yaml) khai báo bốn dịch vụ:
 
-- hai Web Service chạy FastAPI;
-- hai Static Site phục vụ frontend;
+- Web Service chạy FastAPI;
+- Static Site phục vụ frontend;
 - health check cho từng backend;
 - CORS chỉ cho phép các frontend đã khai báo và môi trường localhost.
 
@@ -105,8 +85,6 @@ Artifact được commit để dịch vụ có thể khởi động mà không h
 cd Du_an_1_Iris_SVM/backend
 python scripts/train.py
 
-cd ../../Du_an_2_Breast_Cancer/backend
-python scripts/train.py
 ```
 
 Sau khi huấn luyện lại, cần cập nhật artifact, metadata, chạy toàn bộ test và tăng `model_version` nếu hành vi mô hình thay đổi.

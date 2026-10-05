@@ -26,22 +26,6 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
 
-  breast-cancer-backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Du_an_2_Breast_Cancer/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: Du_an_2_Breast_Cancer/backend/requirements.txt
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt
-      - run: python -m pytest -q
-
   frontend-syntax:
     runs-on: ubuntu-latest
     steps:
@@ -50,4 +34,3 @@ jobs:
         with:
           node-version: "22"
       - run: node --check Du_an_1_Iris_SVM/frontend/script.js
-      - run: node --check Du_an_2_Breast_Cancer/frontend/script.js

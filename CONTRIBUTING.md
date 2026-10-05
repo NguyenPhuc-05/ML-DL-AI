@@ -13,7 +13,6 @@
 ```text
 feat(iris): add prediction metadata endpoint
 fix(render): correct backend start command
-test(breast-cancer): reject unknown features
 docs: clarify local setup
 refactor(frontend): reuse API status helper
 ```
@@ -25,5 +24,4 @@ refactor(frontend): reuse API status helper
 - [ ] JavaScript không có lỗi cú pháp.
 - [ ] README được cập nhật nếu cách chạy hoặc API thay đổi.
 - [ ] Artifact và metadata cùng phiên bản nếu mô hình được huấn luyện lại.
-- [ ] Nội dung Breast Cancer vẫn ghi rõ mục đích giáo dục.
 
