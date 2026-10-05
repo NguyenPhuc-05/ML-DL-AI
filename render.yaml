@@ -5,3 +5,9 @@ services:
     rootDir: Du_an_1_Iris_SVM
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+
+  - type: web
+    name: iris-svm-frontend
+    env: static
+    rootDir: Du_an_1_Iris_SVM/frontend
+    staticPublishPath: .
