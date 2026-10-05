@@ -14,7 +14,7 @@ try:
         pass
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 except Exception as e:
-    print(f"Lỗi kết nối CSDL MySQL: {e}. Chuyển sang dùng SQLite Fallback.")
+    print(f"MySQL Connection Error. Falling back to SQLite.")
     # Fallback tạm thời nếu chưa cài MySQL để app không crash hoàn toàn
     fallback_url = "sqlite:///./iris_fallback.db"
     engine = create_engine(fallback_url, connect_args={"check_same_thread": False})
