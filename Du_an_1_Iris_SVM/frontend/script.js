@@ -1277,6 +1277,7 @@ function renderHistoryTable(history) {
         return `
             <tr data-id="${h.id}">
                 <td>${i + 1}</td>
+                <td><span style="font-size:0.8rem;color:var(--primary);font-weight:600">@${h.username || 'unknown'}</span></td>
                 <td>${h.sepal_length.toFixed(1)}</td>
                 <td>${h.sepal_width.toFixed(1)}</td>
                 <td>${h.petal_length.toFixed(1)}</td>

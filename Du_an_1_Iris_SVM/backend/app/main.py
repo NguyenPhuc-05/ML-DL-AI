@@ -143,6 +143,7 @@ class IrisPrediction(BaseModel):
 
 class PredictionRecord(BaseModel):
     id: int
+    username: str
     sepal_length: float
     sepal_width: float
     petal_length: float
@@ -268,19 +269,27 @@ def predict(data: IrisInput, current_user: User = Depends(get_current_user)):
     )
 
 
+from datetime import datetime, timezone, timedelta
+
 @app.get("/predictions", response_model=list[PredictionRecord])
 def get_predictions(limit: int = Query(default=50, le=500), current_user: User = Depends(get_current_user)):
-    """Get prediction history from database."""
+    """Get prediction history from database for the last 5 hours globally."""
     db = next(get_db_session())
     try:
-        rows = db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).order_by(DBPredictionRecord.id.desc()).limit(limit).all()
+        five_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
+        rows = db.query(DBPredictionRecord, User.username)\
+                 .join(User, DBPredictionRecord.user_id == User.id)\
+                 .filter(DBPredictionRecord.created_at >= five_hours_ago)\
+                 .order_by(DBPredictionRecord.id.desc())\
+                 .limit(limit)\
+                 .all()
         return [
             {
-                "id": r.id, "sepal_length": r.sepal_length, "sepal_width": r.sepal_width,
-                "petal_length": r.petal_length, "petal_width": r.petal_width,
-                "kernel": r.kernel, "prediction": r.prediction, "class_id": r.class_id,
-                "probability": r.probability, "model_version": r.model_version,
-                "created_at": r.created_at
+                "id": r[0].id, "username": r[1], "sepal_length": r[0].sepal_length, "sepal_width": r[0].sepal_width,
+                "petal_length": r[0].petal_length, "petal_width": r[0].petal_width,
+                "kernel": r[0].kernel, "prediction": r[0].prediction, "class_id": r[0].class_id,
+                "probability": r[0].probability, "model_version": r[0].model_version,
+                "created_at": r[0].created_at
             }
             for r in rows
         ]
@@ -311,7 +320,12 @@ def export_predictions(current_user: User = Depends(get_current_user)):
 
     db = next(get_db_session())
     try:
-        rows = db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).order_by(DBPredictionRecord.id.desc()).all()
+        five_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
+        rows = db.query(DBPredictionRecord, User.username)\
+                 .join(User, DBPredictionRecord.user_id == User.id)\
+                 .filter(DBPredictionRecord.created_at >= five_hours_ago)\
+                 .order_by(DBPredictionRecord.id.desc())\
+                 .all()
     finally:
         db.close()
 
