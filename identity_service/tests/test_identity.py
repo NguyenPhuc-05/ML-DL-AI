@@ -116,3 +116,42 @@ def test_me_unauthorized():
     res = client.get("/me")
     assert res.status_code == 401
 
+def test_owner_account_seeded_and_can_access_admin():
+    # Login as seeded owner
+    owner_email = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local")
+    owner_pwd = os.getenv("OWNER_PASSWORD", "Admin@ML2024!!")
+
+    login_res = client.post(
+        "/login",
+        json={
+            "email": owner_email,
+            "password": owner_pwd,
+            "client_id": "iris-svm-api",
+        },
+    )
+    assert login_res.status_code == 200
+    data = login_res.json()
+    assert data["user"]["is_owner"] is True
+    token = data["access_token"]
+
+    # Owner can access /admin/users
+    admin_res = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
+    assert admin_res.status_code == 200
+    users = admin_res.json()
+    assert any(u["email"] == owner_email and u["is_owner"] is True for u in users)
+
+
+def test_regular_user_forbidden_from_admin():
+    # Register and login as regular user
+    client.post("/register", json={"email": "regular@example.com", "password": "regularpassword123"})
+    login_res = client.post(
+        "/login",
+        json={"email": "regular@example.com", "password": "regularpassword123", "client_id": "iris-svm-api"},
+    )
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+
+    # Regular user is forbidden (403) from /admin/users
+    admin_res = client.get("/admin/users", headers={"Authorization": f"Bearer {token}"})
+    assert admin_res.status_code == 403
+    assert "chủ sở hữu" in admin_res.json()["detail"].lower()

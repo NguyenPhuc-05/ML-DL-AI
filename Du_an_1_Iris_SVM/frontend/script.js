@@ -83,6 +83,20 @@ const IRIS_DATA = [
 // ===== AUTHENTICATION LOGIC =====
 let authToken = localStorage.getItem('iris_auth_token');
 let currentUsername = localStorage.getItem('iris_username');
+let isOwner = localStorage.getItem('iris_is_owner') === '1';
+
+function parseJwtPayload(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const authOverlay = document.getElementById('auth-overlay');
@@ -107,8 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
             authOverlay.classList.add('hidden');
             if (appContainer) appContainer.style.display = 'block';
             if (userBadge) userBadge.hidden = false;
-            if (navUsername) navUsername.textContent = currentUsername;
+            if (navUsername) {
+                navUsername.innerHTML = currentUsername + (isOwner ? ' <span style="background:rgba(245,158,11,0.2);color:#f59e0b;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;margin-left:4px;">👑 Chủ sở hữu</span>' : '');
+            }
+            const adminTabBtn = document.getElementById('tab-btn-admin');
+            if (adminTabBtn) {
+                adminTabBtn.style.display = isOwner ? 'inline-block' : 'none';
+            }
             loadHistoryFromDB();
+            if (isOwner) {
+                loadAdminData();
+            }
         }
     }
 
@@ -156,8 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         authToken = data.access_token;
                         currentUsername = data.user.email;
+                        const payload = parseJwtPayload(authToken);
+                        isOwner = !!(data.user && data.user.is_owner) || !!(payload && payload.is_owner);
                         localStorage.setItem('iris_auth_token', authToken);
                         localStorage.setItem('iris_username', currentUsername);
+                        localStorage.setItem('iris_is_owner', isOwner ? '1' : '0');
                         checkAuth();
                     }
                 } else {
@@ -196,8 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function triggerLogout() {
         localStorage.removeItem('iris_auth_token');
         localStorage.removeItem('iris_username');
+        localStorage.removeItem('iris_is_owner');
         authToken = null;
         currentUsername = null;
+        isOwner = false;
+        const adminTabBtn = document.getElementById('tab-btn-admin');
+        if (adminTabBtn) adminTabBtn.style.display = 'none';
         checkAuth();
     }
     window.triggerLogout = triggerLogout;
@@ -288,6 +318,8 @@ function initTabs() {
                 loadKernelArena();
             } else if (btn.dataset.tab === 'history') {
                 loadHistoryFromDB();
+            } else if (btn.dataset.tab === 'admin') {
+                loadAdminData();
             }
         });
     });

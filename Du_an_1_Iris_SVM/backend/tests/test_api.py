@@ -353,3 +353,51 @@ def test_per_user_history_isolation():
     client.delete("/predictions", headers={"Authorization": f"Bearer {user_a_token}"})
     assert len(client.get("/predictions", headers={"Authorization": f"Bearer {user_a_token}"}).json()) == 0
     assert len(client.get("/predictions", headers={"Authorization": f"Bearer {user_b_token}"}).json()) == 2
+
+def test_admin_predictions_accessible_by_owner_without_usernames():
+    # Generate an owner token
+    secret = os.environ.get("JWT_SECRET", "iris-test-jwt-secret-key-32bytes!!")
+    now = datetime.now(timezone.utc)
+    owner_token = jwt.encode(
+        {"sub": "owner-1", "email": "admin@ml-dl-ai.local", "aud": "iris-svm-api", "is_owner": True, "iat": now, "exp": now + timedelta(hours=1)},
+        secret,
+        algorithm="HS256"
+    )
+
+    # Make a prediction to ensure data exists
+    client.post(
+        "/predict",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        json={"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"},
+    )
+
+    # Call admin predictions
+    res = client.get("/admin/predictions", headers={"Authorization": f"Bearer {owner_token}"})
+    assert res.status_code == 200
+    items = res.json()
+    assert len(items) >= 1
+
+    # SECURITY CHECK: Tuyệt đối KHÔNG hiển thị username hay email người dùng trong lịch sử
+    for item in items:
+        assert "username" not in item
+        assert "user_id" not in item
+        assert "email" not in item
+        assert "created_at" in item
+        assert "kernel" in item
+        assert "prediction" in item
+        assert "probability" in item
+
+
+def test_admin_predictions_forbidden_for_regular_user():
+    secret = os.environ.get("JWT_SECRET", "iris-test-jwt-secret-key-32bytes!!")
+    now = datetime.now(timezone.utc)
+    # Regular user token without is_owner
+    regular_token = jwt.encode(
+        {"sub": "regular-99", "email": "user@iris.ai", "aud": "iris-svm-api", "is_owner": False, "iat": now, "exp": now + timedelta(hours=1)},
+        secret,
+        algorithm="HS256"
+    )
+
+    res = client.get("/admin/predictions", headers={"Authorization": f"Bearer {regular_token}"})
+    assert res.status_code == 403
+    assert "chủ sở hữu" in res.json()["detail"].lower()

@@ -32,7 +32,8 @@ if str(REPO_ROOT) not in sys.path:
 from database.db import get_db_session
 from database.models import PredictionRecord as DBPredictionRecord
 from shared.auth import get_current_user
-from fastapi import Depends
+from fastapi import Depends, Security
+from fastapi.security import HTTPBearer
 
 import joblib
 import numpy as np
@@ -682,3 +683,50 @@ def get_sample_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=iris_test_samples.csv"},
     )
+
+# ====================================================================
+# ADMIN: Danh sach du doan toan he thong (owner only, khong co username)
+# ====================================================================
+@app.get("/admin/predictions")
+def admin_all_predictions(
+    limit: int = 200,
+    credentials=Security(HTTPBearer(auto_error=False)),
+):
+    import jwt as _jwt
+    JWT_SECRET_ADMIN = os.getenv("JWT_SECRET", "identity_service_secret_key")
+
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Yêu cầu đăng nhập")
+    try:
+        payload = _jwt.decode(
+            credentials.credentials,
+            JWT_SECRET_ADMIN,
+            algorithms=["HS256"],
+            options={"verify_aud": False},
+        )
+        if not payload.get("is_owner"):
+            raise HTTPException(status_code=403, detail="Chỉ chủ sở hữu mới có quyền truy cập")
+    except _jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+    db = next(get_db_session())
+    try:
+        records = (
+            db.query(DBPredictionRecord)
+            .order_by(DBPredictionRecord.id.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "id": r.id,
+                "created_at": r.created_at,
+                "kernel": r.kernel,
+                "prediction": r.prediction,
+                "probability": round(r.probability * 100, 1),
+                "model_version": r.model_version,
+            }
+            for r in records
+        ]
+    finally:
+        db.close()

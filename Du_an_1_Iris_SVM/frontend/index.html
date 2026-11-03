@@ -69,6 +69,7 @@
             <button class="tab-btn" role="tab" data-tab="svm">🧠 SVM</button>
             <button class="tab-btn" role="tab" data-tab="history">📋 Lịch sử</button>
             <button class="tab-btn" role="tab" data-tab="about">👤 Giới thiệu</button>
+            <button class="tab-btn" role="tab" data-tab="admin" id="tab-btn-admin" style="display: none;">👑 Quản trị</button>
         </nav>
 
         <!-- ===== TAB PANELS ===== -->
@@ -679,7 +680,81 @@
                 </div>
             </section>
 
+
+            <!-- ── TAB 7: QUẢN TRỊ HỆ THỐNG (CHỦ SỞ HỮU) ── -->
+            <section class="tab-panel" id="panel-admin" role="tabpanel">
+                <div class="glass-panel" style="margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <h2 class="sec-title" style="margin: 0;">👑 Quản trị Hệ thống (Chủ sở hữu)</h2>
+                            <p class="sec-desc" style="margin: 4px 0 0 0;">
+                                Tài khoản chủ sở hữu độc quyền &amp; cố định. Giám sát thời gian khởi tạo tài khoản, lần đăng nhập và lịch sử phân loại ẩn danh toàn hệ thống.
+                            </p>
+                        </div>
+                        <button id="admin-refresh-btn" class="hist-action-btn" style="padding: 8px 16px; border-radius: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+                            🔄 Làm mới dữ liệu
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Danh sách người dùng -->
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 class="sec-title" style="font-size: 1.1rem; margin: 0;">👥 Danh sách Tài khoản &amp; Thời gian Đăng nhập</h3>
+                            <span id="admin-user-count" class="model-badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">0 tài khoản</span>
+                        </div>
+                        <div class="history-table-wrapper" style="max-height: 320px; overflow-y: auto;">
+                            <table class="history-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Email tài khoản</th>
+                                        <th>Vai trò</th>
+                                        <th>Thời điểm tạo tài khoản</th>
+                                        <th>Lần đăng nhập gần nhất</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-tbody">
+                                    <tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding: 20px;">Đang tải danh sách tài khoản...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Lịch sử dự đoán toàn hệ thống (Bảo mật: Không hiện tên người dùng) -->
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div>
+                                <h3 class="sec-title" style="font-size: 1.1rem; margin: 0;">📊 Hoạt động Dự đoán Toàn Hệ thống</h3>
+                                <p style="font-size: 0.8rem; color: #10b981; margin: 4px 0 0 0;">
+                                    🔒 Chế độ bảo mật riêng tư: Tuyệt đối không hiển thị tên / danh tính người dùng trong nhật ký dự đoán.
+                                </p>
+                            </div>
+                            <span id="admin-pred-count" class="model-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">0 lượt dự đoán</span>
+                        </div>
+                        <div class="history-table-wrapper" style="max-height: 360px; overflow-y: auto;">
+                            <table class="history-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th># ID</th>
+                                        <th>Thời gian (Ngày &amp; Giờ)</th>
+                                        <th>Kernel SVM</th>
+                                        <th>Kết quả phân loại</th>
+                                        <th>Độ tin cậy</th>
+                                        <th>Model Version</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-preds-tbody">
+                                    <tr><td colspan="6" style="text-align:center;color:var(--text-sec);padding: 20px;">Đang tải hoạt động dự đoán...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
+
 
         <!-- FOOTER -->
         <footer class="app-footer glass-panel">
