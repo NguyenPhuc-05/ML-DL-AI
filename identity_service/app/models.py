@@ -2,7 +2,10 @@ import os
 import bcrypt
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, inspect, text
-from app.db import Base, engine, SessionLocal
+try:
+    from app.db import Base, engine, SessionLocal
+except (ImportError, ModuleNotFoundError):
+    from identity_service.app.db import Base, engine, SessionLocal
 
 
 class User(Base):

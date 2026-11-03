@@ -11,8 +11,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.db import get_db
-from app.models import Client, User, init_db
+try:
+    from app.db import get_db
+    from app.models import Client, User, init_db
+except (ImportError, ModuleNotFoundError):
+    from identity_service.app.db import get_db
+    from identity_service.app.models import Client, User, init_db
 
 # JWT configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "identity_service_secret_key")

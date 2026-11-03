@@ -16,6 +16,30 @@ const IDP_API_URL = isLocal
 
 const CLIENT_ID = 'iris-svm-api';
 
+// ─── Smart Auth Fetcher with Auto-Fallback ───
+// Tự động thử Identity Service độc lập trước, nếu chưa online thì fallback sang API_BASE
+async function fetchAuth(endpoint, options = {}) {
+    if (IDP_API_URL && IDP_API_URL !== API_BASE) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            const res = await fetch(`${IDP_API_URL}${endpoint}`, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.status !== 404 && res.status !== 502 && res.status !== 503) {
+                return res;
+            }
+            console.warn(`IDP ${IDP_API_URL}${endpoint} returned ${res.status}, falling back to ${API_BASE}`);
+        } catch (e) {
+            console.warn(`IDP ${IDP_API_URL}${endpoint} unreachable, falling back to ${API_BASE}:`, e.message);
+        }
+    }
+    return await fetch(`${API_BASE}${endpoint}`, options);
+}
+
+
 // ─── Feature Config ───
 const FEATURES = [
     { key: 'sepal-length', api: 'sepal_length', label: 'Sepal Length', min: 4.0, max: 8.0 },
@@ -164,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 if (isLoginMode) {
-                    const res = await fetch(`${IDP_API_URL}/login`, {
+                    const res = await fetchAuth('/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password, client_id: CLIENT_ID })
@@ -187,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         checkAuth();
                     }
                 } else {
-                    const res = await fetch(`${IDP_API_URL}/register`, {
+                    const res = await fetchAuth('/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password })
@@ -1552,3 +1576,132 @@ async function checkApiHealth() {
     }
     setApiStatus('offline', 'API đang bảo trì');
 }
+
+
+// ================================================================
+// QUẢN TRỊ HỆ THỐNG (CHỦ SỞ HỮU)
+// ================================================================
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatDateTime(isoStr) {
+    if (!isoStr) return '<span style="color:var(--text-sec);font-style:italic;">Chưa đăng nhập</span>';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        return d.toLocaleString('vi-VN', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+    } catch (e) {
+        return isoStr;
+    }
+}
+
+async function loadAdminData() {
+    if (!authToken || !isOwner) return;
+
+    const usersTbody = document.getElementById('admin-users-tbody');
+    const predsTbody = document.getElementById('admin-preds-tbody');
+    const userCountEl = document.getElementById('admin-user-count');
+    const predCountEl = document.getElementById('admin-pred-count');
+
+    // 1. Tải danh sách người dùng (qua fetchAuth với fallback)
+    try {
+        const resUsers = await fetchAuth('/admin/users', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (resUsers.ok) {
+            const users = await resUsers.json();
+            if (userCountEl) userCountEl.textContent = `${users.length} tài khoản`;
+            if (usersTbody) {
+                if (users.length === 0) {
+                    usersTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding:16px;">Chưa có tài khoản nào.</td></tr>';
+                } else {
+                    usersTbody.innerHTML = users.map(u => `
+                        <tr style="${u.is_owner ? 'background: rgba(245, 158, 11, 0.08);' : ''}">
+                            <td style="font-family: monospace; font-weight: 600;">#${u.id}</td>
+                            <td style="font-weight: 500;">
+                                ${escapeHtml(u.email)}
+                                ${u.is_owner ? ' <span style="background:#f59e0b;color:#000;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:bold;margin-left:4px;">Chủ sở hữu</span>' : ''}
+                            </td>
+                            <td>
+                                ${u.is_owner 
+                                    ? '<span style="color:#f59e0b;font-weight:600;">👑 Chủ sở hữu (Cố định)</span>' 
+                                    : '<span style="color:var(--text-sec);">Người dùng</span>'}
+                            </td>
+                            <td>${formatDateTime(u.created_at)}</td>
+                            <td>${formatDateTime(u.last_login_at)}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } else if (resUsers.status === 401 || resUsers.status === 403) {
+            if (usersTbody) usersTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:16px;">Không có quyền truy cập dữ liệu quản trị.</td></tr>';
+        }
+    } catch (err) {
+        console.error('Error loading admin users:', err);
+        if (usersTbody) usersTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:16px;">Lỗi kết nối tới Identity Service.</td></tr>';
+    }
+
+    // 2. Tải lịch sử dự đoán toàn hệ thống (BẢO MẬT: KHÔNG HIỆN USERNAME)
+    try {
+        const resPreds = await fetch(`${API_BASE}/admin/predictions?limit=100`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (resPreds.ok) {
+            const preds = await resPreds.json();
+            if (predCountEl) predCountEl.textContent = `${preds.length} lượt dự đoán`;
+            if (predsTbody) {
+                if (preds.length === 0) {
+                    predsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-sec);padding:16px;">Chưa có lượt dự đoán nào trên hệ thống.</td></tr>';
+                } else {
+                    predsTbody.innerHTML = preds.map(p => {
+                        const badgeColor = p.prediction === 'Iris setosa' ? '#fb7185' : (p.prediction === 'Iris versicolor' ? '#a78bfa' : '#38bdf8');
+                        return `
+                            <tr>
+                                <td style="font-family: monospace; font-weight: 600;">#${p.id}</td>
+                                <td style="color: var(--text-primary); font-weight: 500;">${formatDateTime(p.created_at)}</td>
+                                <td><span style="font-family: monospace; background: var(--bg-card); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">${escapeHtml(p.kernel)}</span></td>
+                                <td>
+                                    <span style="display:inline-flex; align-items:center; gap:6px;">
+                                        <span style="width:8px; height:8px; border-radius:50%; background:${badgeColor}; display:inline-block;"></span>
+                                        <strong style="color:${badgeColor};">${escapeHtml(p.prediction)}</strong>
+                                    </span>
+                                </td>
+                                <td><strong>${p.probability}%</strong></td>
+                                <td style="color:var(--text-sec); font-size:0.85rem;">${escapeHtml(p.model_version || 'v1.0')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+        } else if (resPreds.status === 401 || resPreds.status === 403) {
+            if (predsTbody) predsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:16px;">Không có quyền truy cập nhật ký dự đoán.</td></tr>';
+        }
+    } catch (err) {
+        console.error('Error loading admin predictions:', err);
+        if (predsTbody) predsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:16px;">Lỗi kết nối tới Iris Backend API.</td></tr>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('admin-refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Đang tải...';
+            loadAdminData().finally(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Làm mới dữ liệu';
+            });
+        });
+    }
+});

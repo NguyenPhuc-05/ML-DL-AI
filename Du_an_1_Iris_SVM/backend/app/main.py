@@ -730,3 +730,42 @@ def admin_all_predictions(
         ]
     finally:
         db.close()
+
+# ─── Centralized IdP Unified Mount & Fallback ───
+# Giúp hệ thống hoạt động xuyên suốt 100% trên cả Local và Render
+try:
+    IDP_DIR = REPO_ROOT / "identity_service"
+    if str(IDP_DIR) not in sys.path:
+        sys.path.insert(0, str(IDP_DIR))
+    from identity_service.app.main import app as idp_app
+    app.mount("/idp", idp_app)
+
+    from identity_service.app.main import (
+        register as idp_register,
+        login as idp_login,
+        get_me as idp_get_me,
+        admin_list_users as idp_admin_list_users,
+        RegisterRequest,
+        LoginRequest,
+        TokenResponse,
+        UserResponse,
+    )
+    from identity_service.app.db import get_db as get_idp_db
+
+    @app.post("/register", status_code=201)
+    def unified_register(payload: RegisterRequest, db=Depends(get_idp_db)):
+        return idp_register(payload, db)
+
+    @app.post("/login", response_model=TokenResponse)
+    def unified_login(payload: LoginRequest, db=Depends(get_idp_db)):
+        return idp_login(payload, db)
+
+    @app.get("/me", response_model=UserResponse)
+    def unified_me(credentials=Security(HTTPBearer(auto_error=False)), db=Depends(get_idp_db)):
+        return idp_get_me(credentials, db)
+
+    @app.get("/admin/users")
+    def unified_admin_users(credentials=Security(HTTPBearer(auto_error=False)), db=Depends(get_idp_db)):
+        return idp_admin_list_users(credentials, db)
+except Exception as e:
+    print(f"Note: IDP fallback integration note: {e}")
