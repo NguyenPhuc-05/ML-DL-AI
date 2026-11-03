@@ -8,6 +8,12 @@ const API_BASE = ['localhost', '127.0.0.1'].includes(location.hostname)
     ? 'http://localhost:8000'
     : 'https://iris-svm-api-yfd4.onrender.com';
 
+const IDP_API_URL = ['localhost', '127.0.0.1'].includes(location.hostname)
+    ? 'http://localhost:8001'
+    : (window.IDP_API_URL || 'https://identity-service.onrender.com');
+
+const CLIENT_ID = 'iris-svm-api';
+
 // ─── Feature Config ───
 const FEATURES = [
     { key: 'sepal-length', api: 'sepal_length', label: 'Sepal Length', min: 4.0, max: 8.0 },
@@ -125,42 +131,59 @@ document.addEventListener('DOMContentLoaded', () => {
     if(authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('auth-user').value;
+            const email = document.getElementById('auth-user').value.trim();
             const password = document.getElementById('auth-pass').value;
             authError.hidden = true;
             authSubmitBtn.disabled = true;
             authSubmitBtn.textContent = 'Đang xử lý...';
 
             try {
-                const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
-                const res = await fetch(API_BASE + endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                
-                if (!res.ok) {
-                    authError.textContent = data.detail || data.msg || 'Đã có lỗi xảy ra';
-                    authError.hidden = false;
-                } else {
-                    if (isLoginMode) {
+                if (isLoginMode) {
+                    const res = await fetch(`${IDP_API_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password, client_id: CLIENT_ID })
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                        authError.textContent = data.detail || 'Sai thông tin đăng nhập hoặc client_id không hợp lệ';
+                        authError.hidden = false;
+                        authError.style.background = 'rgba(239, 68, 68, 0.15)';
+                        authError.style.color = '#ef4444';
+                    } else {
                         authToken = data.access_token;
-                        currentUsername = data.username;
+                        currentUsername = data.user.email;
                         localStorage.setItem('iris_auth_token', authToken);
                         localStorage.setItem('iris_username', currentUsername);
                         checkAuth();
+                    }
+                } else {
+                    const res = await fetch(`${IDP_API_URL}/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                        authError.textContent = data.detail || 'Đã có lỗi khi đăng ký';
+                        authError.hidden = false;
+                        authError.style.background = 'rgba(239, 68, 68, 0.15)';
+                        authError.style.color = '#ef4444';
                     } else {
                         authSwitchBtn.click();
-                        authError.textContent = 'Đăng ký thành công! Vui lòng đăng nhập.';
+                        authError.textContent = 'Đăng ký thành công! Vui lòng đăng nhập với tài khoản vừa tạo.';
                         authError.hidden = false;
                         authError.style.background = 'rgba(76, 175, 80, 0.1)';
                         authError.style.color = '#4caf50';
                     }
                 }
             } catch (err) {
-                authError.textContent = 'Lỗi kết nối máy chủ';
+                authError.textContent = 'Lỗi kết nối tới Identity Service (IdP)';
                 authError.hidden = false;
+                authError.style.background = 'rgba(239, 68, 68, 0.15)';
+                authError.style.color = '#ef4444';
             } finally {
                 authSubmitBtn.disabled = false;
                 authSubmitBtn.textContent = isLoginMode ? 'Đăng nhập' : 'Đăng ký';
@@ -168,14 +191,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function triggerLogout() {
+        localStorage.removeItem('iris_auth_token');
+        localStorage.removeItem('iris_username');
+        authToken = null;
+        currentUsername = null;
+        checkAuth();
+    }
+    window.triggerLogout = triggerLogout;
+
     if(logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('iris_auth_token');
-            localStorage.removeItem('iris_username');
-            authToken = null;
-            currentUsername = null;
-            checkAuth();
-        });
+        logoutBtn.addEventListener('click', triggerLogout);
     }
 
     checkAuth();
@@ -1253,6 +1279,10 @@ function animateNumbers() {
 async function loadHistoryFromDB() {
     try {
         const res = await fetch(`${API_BASE}/predictions?limit=50`, { headers: { 'Authorization': 'Bearer ' + authToken } });
+        if (res.status === 401) {
+            if (window.triggerLogout) window.triggerLogout();
+            return;
+        }
         if (!res.ok) throw new Error();
         const history = await res.json();
         renderHistoryTable(history);

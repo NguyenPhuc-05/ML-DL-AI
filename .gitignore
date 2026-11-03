@@ -32,3 +32,9 @@ Thumbs.db
 *.db
 *.sqlite3
 
+
+# Test artefacts
+test_*.db
+
+# Python version pin (keep in VCS for reproducibility)
+!.python-version

@@ -1,10 +1,37 @@
+import os
+from datetime import datetime, timedelta, timezone
+
+import jwt
+import pytest
 from fastapi.testclient import TestClient
 
+# Configure test environment
+os.environ["DATABASE_URL"] = "sqlite:///./test_iris.db"
+os.environ["JWT_SECRET"] = "iris-test-jwt-secret-key-32bytes!!"
+os.environ["CLIENT_ID"] = "iris-svm-api"
+
 from app.main import app
+from shared.auth import get_current_user
+
+
+@pytest.fixture(autouse=True)
+def default_auth_override():
+    """Maintain backward compatibility for existing 14 tests by overriding auth dependency."""
+    app.dependency_overrides[get_current_user] = lambda: {
+        "id": "test-user-default",
+        "email": "student@iris.ai",
+        "aud": "iris-svm-api",
+    }
+    yield
+    app.dependency_overrides.clear()
 
 
 client = TestClient(app)
 
+
+# ==============================================================================
+# EXISTING 14 TESTS (PRESERVED & PASSING)
+# ==============================================================================
 
 def test_health_reports_loaded_model():
     response = client.get("/health")
@@ -196,3 +223,133 @@ def test_predictions_history_and_export():
     export_res = client.get("/predictions/export")
     assert export_res.status_code == 200
     assert "spreadsheetml" in export_res.headers.get("content-type", "")
+
+
+# ==============================================================================
+# NEW AUTHENTICATION & CENTRALIZED IDP INTEGRATION TESTS
+# ==============================================================================
+
+def test_unauthenticated_endpoints_return_401():
+    """Verify protected endpoints reject requests when no Authorization header is provided."""
+    app.dependency_overrides.clear()  # Remove mock override
+
+    endpoints = [
+        ("POST", "/predict", {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"}),
+        ("POST", "/predict-batch", {"samples": [{"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"}]}),
+        ("POST", "/explain", {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"}),
+        ("GET", "/predictions", None),
+        ("GET", "/predictions/export", None),
+        ("DELETE", "/predictions", None),
+    ]
+
+    for method, path, body in endpoints:
+        if method == "POST":
+            res = client.post(path, json=body)
+        elif method == "GET":
+            res = client.get(path)
+        elif method == "DELETE":
+            res = client.delete(path)
+        assert res.status_code == 401, f"{method} {path} should return 401 when unauthenticated, got {res.status_code}"
+
+
+def test_wrong_audience_token_rejected_with_401():
+    """Verify that a valid JWT token intended for another client (wrong aud) is rejected."""
+    app.dependency_overrides.clear()
+
+    wrong_aud_token = jwt.encode(
+        {
+            "sub": "user-999",
+            "email": "user@breast-cancer.ai",
+            "aud": "breast-cancer-api",  # Wrong audience for iris-svm-api
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=60),
+        },
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+
+    res = client.post(
+        "/predict",
+        headers={"Authorization": f"Bearer {wrong_aud_token}"},
+        json={"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"},
+    )
+    assert res.status_code == 401
+    assert "Audience mismatch" in res.json()["detail"]
+
+
+def test_valid_token_authenticates_successfully():
+    """Verify that a correctly signed JWT with aud=iris-svm-api succeeds without overrides."""
+    app.dependency_overrides.clear()
+
+    valid_token = jwt.encode(
+        {
+            "sub": "user-888",
+            "email": "valid-student@iris.ai",
+            "aud": "iris-svm-api",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=60),
+        },
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+
+    res = client.post(
+        "/predict",
+        headers={"Authorization": f"Bearer {valid_token}"},
+        json={"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"},
+    )
+    assert res.status_code == 200
+    assert res.json()["prediction"] == "setosa"
+
+
+def test_per_user_history_isolation():
+    """Verify user prediction history is completely isolated between users."""
+    app.dependency_overrides.clear()
+
+    user_a_token = jwt.encode(
+        {"sub": "user-A", "email": "a@iris.ai", "aud": "iris-svm-api", "exp": datetime.now(timezone.utc) + timedelta(minutes=60)},
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+    user_b_token = jwt.encode(
+        {"sub": "user-B", "email": "b@iris.ai", "aud": "iris-svm-api", "exp": datetime.now(timezone.utc) + timedelta(minutes=60)},
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+
+    # 1. Clear both histories first
+    client.delete("/predictions", headers={"Authorization": f"Bearer {user_a_token}"})
+    client.delete("/predictions", headers={"Authorization": f"Bearer {user_b_token}"})
+
+    # 2. User A makes 1 prediction
+    client.post(
+        "/predict",
+        headers={"Authorization": f"Bearer {user_a_token}"},
+        json={"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "kernel": "rbf"},
+    )
+
+    # 3. User B makes 2 predictions
+    for _ in range(2):
+        client.post(
+            "/predict",
+            headers={"Authorization": f"Bearer {user_b_token}"},
+            json={"sepal_length": 6.0, "sepal_width": 3.0, "petal_length": 4.5, "petal_width": 1.5, "kernel": "linear"},
+        )
+
+    # 4. Check User A only sees 1 prediction belonging to user A
+    res_a = client.get("/predictions", headers={"Authorization": f"Bearer {user_a_token}"})
+    assert res_a.status_code == 200
+    records_a = res_a.json()
+    assert len(records_a) == 1
+    assert records_a[0]["username"] == "a@iris.ai"
+
+    # 5. Check User B only sees 2 predictions belonging to user B
+    res_b = client.get("/predictions", headers={"Authorization": f"Bearer {user_b_token}"})
+    assert res_b.status_code == 200
+    records_b = res_b.json()
+    assert len(records_b) == 2
+    for r in records_b:
+        assert r["username"] == "b@iris.ai"
+
+    # 6. User A deletes their history: User B history must remain intact!
+    client.delete("/predictions", headers={"Authorization": f"Bearer {user_a_token}"})
+    assert len(client.get("/predictions", headers={"Authorization": f"Bearer {user_a_token}"}).json()) == 0
+    assert len(client.get("/predictions", headers={"Authorization": f"Bearer {user_b_token}"}).json()) == 2

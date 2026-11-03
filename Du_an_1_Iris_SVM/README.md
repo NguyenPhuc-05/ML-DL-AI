@@ -103,16 +103,55 @@ Du_an_1_Iris_SVM/
 
 ## 🚀 5. Hướng dẫn Cài đặt & Vận hành
 
-### 4.1. Khởi động Backend API
+### 4.0. Kiến Trúc Xác Thực Mới (SSO / IdP)
+
+> **T�� phi�n bản này**, xác thực được tách ra khỏi backend Iris thành một **Identity Provider (IdP/SSO)** riêng cổng 8001 dùng chung cho mọi dự án. **Cần khởi động IdP trước** khi chạy hệ thống.
+
+**Luồng xác thực:**
+```text
+Browser --> POST /login (email + password + client_id="iris-svm-api")
+        --> identity-service:8001 --> trả JWT
+        --> iris-svm-api:8000 với Authorization: Bearer <JWT>
+        --> shared/auth.py xác minh JWT (aud == "iris-svm-api")
+```
+
+**Biến môi trường bắt buộc** (xem [backend/.env.example](backend/.env.example)):
+
+| Biến | Mô tả | Giá trị mẫu |
+|---|---|---|
+| `JWT_SECRET` | Khóa JWT (**trùng với identity-service**) | `super-secret-min-32chars!!` |
+| `CLIENT_ID` | ID của service này | `iris-svm-api` |
+
+### 4.1. Khởi tạo Môi trường ảo (venv) & Khởi động Backend API
+
+> **Yêu cầu môi trường chuẩn (Theo quy định của Thầy Đức Minh):**
+> - **Python Version:** 3.12.10 (được cấu hình chuẩn trong file [.python-version](.python-version))
+> - **Thư viện:** Đã khóa cứng toàn bộ phiên bản (freeze) tại [backend/requirements.txt](backend/requirements.txt) nhằm phòng ngừa triệt để lỗi xung đột khi các package tự động cập nhật.
+
 ```bash
-cd backend
+# 1. Di chuyển vào thư mục dự án
+cd Du_an_1_Iris_SVM
+
+# 2. Khởi tạo virtual environment độc lập
 python -m venv .venv
-# Trên Windows:
+
+# 3. Kích hoạt môi trường ảo:
+# Trên Windows (PowerShell/CMD):
 .venv\Scripts\activate
 # Trên Linux/macOS:
 # source .venv/bin/activate
 
-pip install -r requirements.txt
+# 4. Cài đặt các thư viện đã được freeze
+pip install -r backend/requirements.txt
+
+# 5. Khởi chạy Identity Service trước (Terminal riêng — port 8001)
+cd ../../identity_service
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env  # điền JWT_SECRET
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+
+# 6. Khởi chạy Backend Iris SVM (Terminal khác — port 8000)
+cd backend
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 - API Swagger UI kiểm thử trực quan: `http://localhost:8000/docs`

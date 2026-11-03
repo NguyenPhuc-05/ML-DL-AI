@@ -21,18 +21,18 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Thêm root directory vào sys.path để import được module database độc lập
+# Thêm root directory và repo root vào sys.path để import database và shared.auth
 BASE_DIR = Path(__file__).resolve().parents[2]
+REPO_ROOT = BASE_DIR.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.append(str(BASE_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
 
 from database.db import get_db_session
-from database.models import PredictionRecord as DBPredictionRecord, User
-
-import jwt
-import bcrypt
+from database.models import PredictionRecord as DBPredictionRecord
+from shared.auth import get_current_user
 from fastapi import Depends
-from fastapi.security import OAuth2PasswordBearer
 
 import joblib
 import numpy as np
@@ -89,29 +89,7 @@ app.add_middleware(
 )
 
 
-# ─── Auth Setup ───
-SECRET_KEY = "iris_svm_secret_key"
-ALGORITHM = "HS256"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
-def verify_password(plain_password, hashed_password):
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-
-def get_password_hash(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get_db_session)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.username == username).first()
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
+# Authentication handled via shared.auth.get_current_user (Centralized IdP)
 
 
 # ─── Schemas ───
@@ -160,25 +138,7 @@ class BatchPredictRequest(BaseModel):
     samples: list[IrisInput]
 
 
-# ─── Auth Endpoints ───
-@app.post("/auth/register")
-def register(user: UserAuth, db = Depends(get_db_session)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
-    hashed_password = get_password_hash(user.password)
-    new_user = User(username=user.username, password_hash=hashed_password)
-    db.add(new_user)
-    db.commit()
-    return {"msg": "Đăng ký thành công"}
 
-@app.post("/auth/login", response_model=Token)
-def login(user: UserAuth, db = Depends(get_db_session)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if not db_user or not verify_password(user.password, db_user.password_hash):
-        raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu")
-    access_token = jwt.encode({"sub": user.username}, SECRET_KEY, algorithm=ALGORITHM)
-    return {"access_token": access_token, "token_type": "bearer", "username": user.username}
 
 
 # ─── Endpoints ───
@@ -218,7 +178,7 @@ def list_models():
 
 
 @app.post("/predict", response_model=IrisPrediction)
-def predict(data: IrisInput, current_user: User = Depends(get_current_user)):
+def predict(data: IrisInput, current_user: dict = Depends(get_current_user)):
     """Predict iris species using selected kernel version."""
     if data.kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{data.kernel}' not available")
@@ -240,7 +200,7 @@ def predict(data: IrisInput, current_user: User = Depends(get_current_user)):
     db = next(get_db_session())
     try:
         new_record = DBPredictionRecord(
-            user_id=current_user.id,
+            user_id=str(current_user["id"]),
             sepal_length=data.sepal_length,
             sepal_width=data.sepal_width,
             petal_length=data.petal_length,
@@ -272,24 +232,26 @@ def predict(data: IrisInput, current_user: User = Depends(get_current_user)):
 from datetime import datetime, timezone, timedelta
 
 @app.get("/predictions", response_model=list[PredictionRecord])
-def get_predictions(limit: int = Query(default=50, le=500), current_user: User = Depends(get_current_user)):
-    """Get prediction history from database for the last 5 hours globally."""
+def get_predictions(limit: int = Query(default=50, le=500), current_user: dict = Depends(get_current_user)):
+    """Get prediction history from database for the last 5 hours for current user."""
     db = next(get_db_session())
     try:
         five_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
-        rows = db.query(DBPredictionRecord, User.username)\
-                 .join(User, DBPredictionRecord.user_id == User.id)\
+        user_id_str = str(current_user["id"])
+        rows = db.query(DBPredictionRecord)\
+                 .filter(DBPredictionRecord.user_id == user_id_str)\
                  .filter(DBPredictionRecord.created_at >= five_hours_ago)\
                  .order_by(DBPredictionRecord.id.desc())\
                  .limit(limit)\
                  .all()
+        user_label = current_user.get("email") or user_id_str
         return [
             {
-                "id": r[0].id, "username": r[1], "sepal_length": r[0].sepal_length, "sepal_width": r[0].sepal_width,
-                "petal_length": r[0].petal_length, "petal_width": r[0].petal_width,
-                "kernel": r[0].kernel, "prediction": r[0].prediction, "class_id": r[0].class_id,
-                "probability": r[0].probability, "model_version": r[0].model_version,
-                "created_at": r[0].created_at
+                "id": r.id, "username": user_label, "sepal_length": r.sepal_length, "sepal_width": r.sepal_width,
+                "petal_length": r.petal_length, "petal_width": r.petal_width,
+                "kernel": r.kernel, "prediction": r.prediction, "class_id": r.class_id,
+                "probability": r.probability, "model_version": r.model_version,
+                "created_at": r.created_at
             }
             for r in rows
         ]
@@ -298,11 +260,12 @@ def get_predictions(limit: int = Query(default=50, le=500), current_user: User =
 
 
 @app.delete("/predictions")
-def clear_predictions(current_user: User = Depends(get_current_user)):
-    """Clear all prediction history."""
+def clear_predictions(current_user: dict = Depends(get_current_user)):
+    """Clear prediction history for current user."""
     db = next(get_db_session())
     try:
-        db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == current_user.id).delete()
+        user_id_str = str(current_user["id"])
+        db.query(DBPredictionRecord).filter(DBPredictionRecord.user_id == user_id_str).delete()
         db.commit()
         return {"status": "cleared"}
     finally:
@@ -310,8 +273,8 @@ def clear_predictions(current_user: User = Depends(get_current_user)):
 
 
 @app.get("/predictions/export")
-def export_predictions(current_user: User = Depends(get_current_user)):
-    """Export all predictions as Excel file (.xlsx)."""
+def export_predictions(current_user: dict = Depends(get_current_user)):
+    """Export current user predictions as Excel file (.xlsx)."""
     try:
         import openpyxl
         from openpyxl.styles import Font, PatternFill
@@ -321,8 +284,9 @@ def export_predictions(current_user: User = Depends(get_current_user)):
     db = next(get_db_session())
     try:
         five_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
-        rows = db.query(DBPredictionRecord, User.username)\
-                 .join(User, DBPredictionRecord.user_id == User.id)\
+        user_id_str = str(current_user["id"])
+        rows = db.query(DBPredictionRecord)\
+                 .filter(DBPredictionRecord.user_id == user_id_str)\
                  .filter(DBPredictionRecord.created_at >= five_hours_ago)\
                  .order_by(DBPredictionRecord.id.desc())\
                  .all()
@@ -603,7 +567,7 @@ def kernel_arena():
 # ĐỘT PHÁ 4: EXPLAINABLE AI (XAI)
 # ====================================================================
 @app.post("/explain")
-def explain_prediction(data: IrisInput):
+def explain_prediction(data: IrisInput, current_user: dict = Depends(get_current_user)):
     """Explainable AI (XAI) feature attribution via finite difference sensitivity analysis."""
     if data.kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{data.kernel}' not available")
@@ -666,7 +630,7 @@ def explain_prediction(data: IrisInput):
 # ĐỘT PHÁ 5: BATCH PREDICTION & SAMPLE CSV
 # ====================================================================
 @app.post("/predict-batch")
-def predict_batch(payload: BatchPredictRequest):
+def predict_batch(payload: BatchPredictRequest, current_user: dict = Depends(get_current_user)):
     """Batch prediction endpoint for up to 500 samples."""
     if len(payload.samples) > 500:
         raise HTTPException(status_code=400, detail="Tối đa 500 mẫu trong một lần xử lý")

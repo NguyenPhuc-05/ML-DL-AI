@@ -687,22 +687,22 @@
         </footer>
     </div>
 
-    <!-- AUTH OVERLAY -->
+    <!-- AUTH OVERLAY (CENTRALIZED IdP) -->
     <div id="auth-overlay" class="auth-overlay">
         <div class="auth-modal glass-panel">
-            <h2 id="auth-title">👋 Chào mừng đến với Iris AI</h2>
-            <p class="sec-desc" style="text-align:center;">Vui lòng đăng nhập để lưu dữ liệu dự đoán</p>
+            <h2 id="auth-title">👋 Đăng nhập Hệ thống</h2>
+            <p class="sec-desc" style="text-align:center;">Identity Provider (SSO) dùng chung cho ML-DL-AI</p>
             
             <div id="auth-error" class="error-toast" hidden></div>
 
             <form id="auth-form">
                 <div class="input-group">
-                    <label>Tên đăng nhập</label>
-                    <input type="text" id="auth-user" required autocomplete="username" placeholder="Nhập tên đăng nhập">
+                    <label id="auth-user-label">Email tài khoản</label>
+                    <input type="email" id="auth-user" required autocomplete="email" placeholder="student@example.com">
                 </div>
                 <div class="input-group">
                     <label>Mật khẩu</label>
-                    <input type="password" id="auth-pass" required autocomplete="current-password" placeholder="Nhập mật khẩu">
+                    <input type="password" id="auth-pass" required autocomplete="current-password" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)">
                 </div>
                 <button type="submit" class="predict-btn ripple-btn" id="auth-submit-btn">Đăng nhập</button>
             </form>

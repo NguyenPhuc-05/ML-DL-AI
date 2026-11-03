@@ -1,28 +1,16 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Float, inspect, text
 from database.db import Base, engine
 
-class User(Base):
-    """
-    Model lưu thông tin tài khoản người dùng
-    """
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    
-    predictions = relationship("PredictionRecord", back_populates="user", cascade="all, delete-orphan")
 
 class PredictionRecord(Base):
     """
-    Model độc lập định nghĩa bảng lưu trữ lịch sử phân loại.
-    Chạy trên CSDL SQL chính thức thay vì SQLite local.
+    Model định nghĩa bảng lưu trữ lịch sử phân loại cho từng người dùng.
+    Mỗi bản ghi gắn với user_id (claim 'sub') cấp bởi Centralized Identity Service.
     """
     __tablename__ = "user_predictions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(String(100), index=True, nullable=False, default="anonymous")
     sepal_length = Column(Float, nullable=False)
     sepal_width = Column(Float, nullable=False)
     petal_length = Column(Float, nullable=False)
@@ -33,8 +21,25 @@ class PredictionRecord(Base):
     probability = Column(Float, nullable=False)
     model_version = Column(String(50), nullable=False)
     created_at = Column(String(50), nullable=False)
-    
-    user = relationship("User", back_populates="predictions")
 
-# Khởi tạo bảng nếu chưa tồn tại
+
+def run_safe_migrations():
+    """
+    Safe migration: checks if 'user_predictions' table exists.
+    If 'user_id' column is missing, executes ALTER TABLE to add it.
+    """
+    try:
+        inspector = inspect(engine)
+        if "user_predictions" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("user_predictions")]
+            if "user_id" not in columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE user_predictions ADD COLUMN user_id VARCHAR(100) DEFAULT 'anonymous'"))
+                    conn.commit()
+    except Exception as e:
+        print(f"Migration note: {e}")
+
+
+# Tạo bảng nếu chưa tồn tại và chạy safe migration
 Base.metadata.create_all(bind=engine)
+run_safe_migrations()
