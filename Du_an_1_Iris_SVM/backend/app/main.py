@@ -752,13 +752,33 @@ try:
     )
     from identity_service.app.db import get_db as get_idp_db
 
+    from identity_service.app.models import init_db as init_idp_models_db
+    try:
+        init_idp_models_db()
+    except Exception as _e:
+        print(f"Warning init idp db: {_e}")
+
     @app.post("/register", status_code=201)
     def unified_register(payload: RegisterRequest, db=Depends(get_idp_db)):
-        return idp_register(payload, db)
+        try:
+            return idp_register(payload, db)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback
+            print(f"Unified register error: {e}\n{traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Lỗi đăng ký: {str(e)}")
 
     @app.post("/login", response_model=TokenResponse)
     def unified_login(payload: LoginRequest, db=Depends(get_idp_db)):
-        return idp_login(payload, db)
+        try:
+            return idp_login(payload, db)
+        except HTTPException:
+            raise
+        except Exception as e:
+            import traceback
+            print(f"Unified login error: {e}\n{traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Lỗi đăng nhập: {str(e)}")
 
     @app.get("/me", response_model=UserResponse)
     def unified_me(credentials=Security(HTTPBearer(auto_error=False)), db=Depends(get_idp_db)):

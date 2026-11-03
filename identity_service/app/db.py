@@ -5,11 +5,17 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 APP_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DB_FILE = (APP_DIR / "identity.db").resolve()
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_FILE.as_posix()}")
 
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+# QUAN TRỌNG: Dùng IDP_DATABASE_URL riêng để không bao giờ bị dính biến DATABASE_URL (MySQL) của dự án chính
+IDP_DB_URL = (
+    os.getenv("IDP_DATABASE_URL") 
+    or os.getenv("IDENTITY_DATABASE_URL") 
+    or f"sqlite:///{DEFAULT_DB_FILE.as_posix()}"
+)
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+connect_args = {"check_same_thread": False} if IDP_DB_URL.startswith("sqlite") else {}
+
+engine = create_engine(IDP_DB_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

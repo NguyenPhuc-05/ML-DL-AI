@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 # Ensure test DB and secret
 os.environ["DATABASE_URL"] = "sqlite:///./test_identity.db"
+os.environ["IDP_DATABASE_URL"] = "sqlite:///./test_identity.db"
 os.environ["JWT_SECRET"] = "test-jwt-secret-12345"
 os.environ["CLIENT_IDS"] = "iris-svm-api,breast-cancer-api"
 
