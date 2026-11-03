@@ -99,3 +99,6 @@ def seed_owner():
                 db.commit()
     finally:
         db.close()
+
+# Tự động khởi tạo database, schema và seed dữ liệu khi module được import
+init_db()

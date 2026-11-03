@@ -1,8 +1,11 @@
 import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./identity.db")
+APP_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_DB_FILE = (APP_DIR / "identity.db").resolve()
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_FILE.as_posix()}")
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
@@ -17,4 +20,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
