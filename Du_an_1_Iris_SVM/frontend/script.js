@@ -12,7 +12,7 @@ const API_BASE = isLocal
 
 const IDP_API_URL = isLocal
     ? 'http://127.0.0.1:8001'
-    : (window.IDP_API_URL || 'https://identity-service.onrender.com');
+    : (localStorage.getItem('custom_idp_url') || window.IDP_API_URL || 'https://identity-service.onrender.com');
 
 const CLIENT_ID = 'iris-svm-api';
 
