@@ -4,12 +4,14 @@
    ================================================================ */
 
 // ─── API Configuration ───
-const API_BASE = ['localhost', '127.0.0.1'].includes(location.hostname)
-    ? 'http://localhost:8000'
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:';
+
+const API_BASE = isLocal
+    ? 'http://127.0.0.1:8000'
     : 'https://iris-svm-api-yfd4.onrender.com';
 
-const IDP_API_URL = ['localhost', '127.0.0.1'].includes(location.hostname)
-    ? 'http://localhost:8001'
+const IDP_API_URL = isLocal
+    ? 'http://127.0.0.1:8001'
     : (window.IDP_API_URL || 'https://identity-service.onrender.com');
 
 const CLIENT_ID = 'iris-svm-api';
