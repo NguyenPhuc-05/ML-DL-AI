@@ -48,38 +48,60 @@ Khi dữ liệu không phân tách tuyến tính trong không gian ban đầu $\
 
 ---
 
-## 🛠️ 3. Cấu trúc Dự án
+## 🏛️ 3. Kiến Trúc Hệ Thống (3 Mô Đun Ngang Hàng)
+
+Hệ thống được thiết kế theo mô hình phân tách chuẩn mực gồm **3 thành phần độc lập ngang hàng nhau**:
+
+```text
+┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
+│     1. WEB NGƯỜI DÙNG     │     │      2. HỆ THỐNG API      │     │    3. CƠ SỞ DỮ LIỆU       │
+│        (Frontend)         │◄───►│    (Backend - FastAPI)    │◄───►│   (Database Module)       │
+│ HTML5 / CSS3 / Canvas API │     │ Multi-Kernel SVM & AI/ML  │     │  SQLAlchemy / MySQL / DB  │
+└───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
+```
+
+1. **Web người dùng (Frontend):** Giao diện tương tác người dùng, đồ thị Canvas trực quan hóa 2D/3D, biểu đồ Radar đa chiều, phòng thí nghiệm SVM Playground và giải thích mô hình XAI.
+2. **Hệ thống API (Backend - FastAPI):** Đóng gói 4 mô hình SVM (Linear, RBF, Poly, Sigmoid), tính toán phân lớp, phân tích Support Vectors, và cung cấp chuẩn RESTful API.
+3. **Cơ sở dữ liệu (Database Module):** Mô đun CSDL quản trị người dùng, băm mật khẩu bảo mật (Bcrypt), xác thực JWT và lưu vết lịch sử dự đoán toàn hệ thống.
+
+---
+
+## 🛠️ 4. Cấu trúc Dự án
 
 ```text
 Du_an_1_Iris_SVM/
-├── backend/
+├── database/                    # MÔ ĐUN 1: CƠ SỞ DỮ LIỆU (Độc lập ngang hàng)
+│   ├── db.py                    # Khởi tạo Engine, Session & cơ chế Auto-Fallback SQLite
+│   └── models.py                # Khai báo User và PredictionRecord Models (SQLAlchemy)
+├── backend/                     # MÔ ĐUN 2: HỆ THỐNG API (RESTful FastAPI & ML Engine)
 │   ├── app/
 │   │   ├── __init__.py
-│   │   └── main.py              # FastAPI server, endpoints, database SQLite & ML modules
+│   │   └── main.py              # Endpoints API, bảo mật OAuth2/JWT & 5 module học máy
 │   ├── artifacts/
 │   │   ├── iris_svm_linear.joblib
 │   │   ├── iris_svm_rbf.joblib
 │   │   ├── iris_svm_poly.joblib
 │   │   ├── iris_svm_sigmoid.joblib
 │   │   └── metadata.json        # Thông số CV accuracy, nhãn loài, phiên bản
-│   ├── data/
-│   │   └── predictions.db       # Cơ sở dữ liệu SQLite lưu vết dự đoán
 │   ├── scripts/
-│   │   └── train.py             # Script chuẩn hóa StandardScaler + huấn luyện 4 model
+│   │   └── train.py             # Huấn luyện & chuẩn hóa StandardScaler 4 mô hình SVM
 │   ├── tests/
-│   │   └── test_api.py          # 14 unit tests kiểm thử tự động toàn diện
+│   │   └── test_api.py          # Unit tests kiểm thử tự động toàn diện
 │   └── requirements.txt
-├── frontend/
-│   ├── index.html               # Cấu trúc HTML5 semantic, 6 tab điều hướng
-│   ├── style.css                # Thiết kế Glassmorphism, theme sáng/tối, responsive
+├── frontend/                    # MÔ ĐUN 3: WEB NGƯỜI DÙNG (Client Interface)
+│   ├── index.html               # Cấu trúc HTML5 semantic, điều hướng trực quan
+│   ├── style.css                # Thiết kế giao diện Glassmorphism responsive
 │   ├── script.js                # Canvas radar/scatter plot, XAI, batch & event handlers
+│   ├── assets/
 │   └── images/                  # Ảnh sinh học mẫu Setosa, Versicolor, Virginica
+├── notebooks/                   # NGHIÊN CỨU & THỰC NGHIỆM HỌC MÁY NÂNG CAO
+│   └── 01_eda_and_svm_experiments.ipynb # EDA, khảo sát Margin, Decision Boundary, Kernel Trick
 └── README.md
 ```
 
 ---
 
-## 🚀 4. Hướng dẫn Cài đặt & Vận hành
+## 🚀 5. Hướng dẫn Cài đặt & Vận hành
 
 ### 4.1. Khởi động Backend API
 ```bash
