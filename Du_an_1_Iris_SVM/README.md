@@ -1,4 +1,4 @@
-# 🌸 Đồ Án 1: Iris AI Explorer — Multi-Kernel SVM System
+#  Đồ Án 1: Iris AI Explorer — Multi-Kernel SVM System
 
 > **Học phần:** Học máy Nâng cao (Advanced Machine Learning)  
 > **Sinh viên thực hiện:** Nguyễn Xuân Phúc — **MSSV:** 3110524025 — **Lớp:** 24CKDL  
@@ -105,7 +105,7 @@ Du_an_1_Iris_SVM/
 
 ### 4.0. Kiến Trúc Xác Thực Mới (SSO / IdP)
 
-> **T�� phi�n bản này**, xác thực được tách ra khỏi backend Iris thành một **Identity Provider (IdP/SSO)** riêng cổng 8001 dùng chung cho mọi dự án. **Cần khởi động IdP trước** khi chạy hệ thống.
+> **T�� phi�n bản này**, xác thực được tách ra khỏi backend Iris thành một **Identity Provider (IdP/SSO)** riêng cổng 8001 dùng chung cho mọi dự án. **Cần khởi động IdP trước** khi chạy hệ thống.
 
 **Luồng xác thực:**
 ```text
