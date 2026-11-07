@@ -222,7 +222,14 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-    if not user or not verify_password(payload.password, user.password_hash):
+    # Owner authentication is anchored to the configured Render secret.
+    # Do not re-check the synchronized bcrypt hash after the constant-time
+    # comparison above: this avoids rejecting a valid owner due to stale or
+    # malformed legacy hashes.
+    if not user or (
+        not is_configured_owner
+        and not verify_password(payload.password, user.password_hash)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Sai email hoặc mật khẩu",
