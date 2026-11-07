@@ -98,9 +98,30 @@ def seed_owner():
             db.commit()
             print(f"[IdP] Owner account created: {owner_email}")
         else:
-            # Đảm bảo is_owner luôn True cho owner
+            # Đồng bộ quyền owner và mật khẩu theo cấu hình Render.
+            # Nếu OWNER_PASSWORD đã đổi, hash cũ phải được cập nhật.
+            changed = False
             if not existing.is_owner:
                 existing.is_owner = True
+                changed = True
+
+            pwd_bytes = owner_password.encode("utf-8")[:72]
+            password_matches = False
+            try:
+                password_matches = bcrypt.checkpw(
+                    pwd_bytes, existing.password_hash.encode("utf-8")
+                )
+            except (ValueError, TypeError):
+                password_matches = False
+
+            if not password_matches:
+                existing.password_hash = bcrypt.hashpw(
+                    pwd_bytes, bcrypt.gensalt()
+                ).decode("utf-8")
+                changed = True
+
+            if changed:
                 db.commit()
+                print(f"[IdP] Owner credentials synchronized: {owner_email}")
     finally:
         db.close()
