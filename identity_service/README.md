@@ -1,38 +1,70 @@
-# 🔐 Centralized Identity Service (IdP / SSO)
+﻿# Identity Service — SSO dùng chung cho các đồ án
 
-Dịch vụ định danh và xác thực tập trung dùng chung cho toàn bộ các đồ án thuộc môn **Học máy Nâng cao (ML-DL-AI)**:
-- `Du_an_1_Iris_SVM` (client_id: `iris-svm-api`)
-- `Du_an_2_Breast_Cancer` (client_id: `breast-cancer-api`)
+Dịch vụ xác thực tập trung cho các đồ án trong môn Học máy Nâng cao. Mỗi dự án đăng ký một `client_id` riêng; người dùng chỉ cần một tài khoản duy nhất để đăng nhập vào tất cả.
 
-## 📌 Tính năng chính
-1. **Đăng ký tài khoản (`POST /register`):** Lưu trữ email (unique) và băm mật khẩu bảo mật với Bcrypt.
-2. **Đăng nhập tập trung (`POST /login`):** Kiểm tra `client_id` hợp lệ, cấp phát JWT Token (HS256) chứa các claims:
-   - `sub`: User ID
-   - `email`: Email người dùng
-   - `aud`: `client_id` của dịch vụ gọi đến
-   - `exp`: Hạn sử dụng (60 phút)
-3. **Tra cứu thông tin cá nhân (`GET /me`):** Xác thực qua `Authorization: Bearer <token>`.
-4. **Kiểm tra trạng thái (`GET /health`):** Healthcheck endpoint.
+**Các dự án đang dùng chung:**
+- Đồ án 1 — Iris SVM (`client_id: iris-svm-api`)
+- Đồ án 2 — Breast Cancer (`client_id: breast-cancer-api`)
 
-## 🛠️ Biến môi trường (`.env`)
-| Tên biến | Mặc định | Mô tả |
-| :--- | :--- | :--- |
-| `PORT` | `8001` | Cổng dịch vụ chạy local |
-| `JWT_SECRET` | `identity_service_secret_key` | Khóa bí mật ký JWT Token |
-| `CLIENT_IDS` | `iris-svm-api,breast-cancer-api` | Danh sách các client_id được phép đăng nhập |
-| `FRONTEND_ORIGINS` | `*` | Cấu hình CORS cho Frontend |
-| `DATABASE_URL` | `sqlite:///./identity.db` | CSDL lưu trữ users và clients |
+---
 
-## 🚀 Chạy cục bộ (Local Development)
-```bash
-# 1. Di chuyển vào thư mục dịch vụ
-cd identity_service
+## Endpoints
 
-# 2. Cài đặt thư viện (hoặc dùng venv chung)
-pip install -r requirements.txt
+| Method | Path | Mô tả |
+|---|---|---|
+| POST | `/register` | Đăng ký tài khoản mới |
+| POST | `/login` | Đăng nhập, nhận JWT |
+| GET | `/me` | Thông tin user hiện tại |
+| GET | `/health` | Kiểm tra trạng thái dịch vụ |
+| GET | `/admin/users` | Danh sách tài khoản (owner only) |
 
-# 3. Khởi chạy server trên cổng 8001
-uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+**Luồng xác thực:**
 ```
-API Documentation: `http://localhost:8001/docs`
+Browser -> POST /login (email + password + client_id)
+        -> identity-service:8001 -> trả JWT (aud = client_id)
+        -> iris-svm-api:8000 với header Authorization: Bearer <JWT>
+        -> shared/auth.py xác minh chữ ký và audience
+```
 
+---
+
+## JWT Claims
+
+| Claim | Giá trị |
+|---|---|
+| `sub` | User ID |
+| `email` | Email người dùng |
+| `aud` | `client_id` của dịch vụ đang gọi |
+| `exp` | Hết hạn sau 60 phút |
+| `is_owner` | `true` nếu là tài khoản quản trị |
+
+---
+
+## Biến môi trường
+
+| Biến | Mặc định | Mô tả |
+|---|---|---|
+| `JWT_SECRET` | — | Khóa ký JWT, **phải giống ở mọi service** |
+| `CLIENT_IDS` | `iris-svm-api,breast-cancer-api` | Danh sách client hợp lệ |
+| `FRONTEND_ORIGINS` | `*` | CORS origins |
+| `IDP_DATABASE_URL` | `sqlite:///./identity.db` | CSDL lưu user và client |
+| `OWNER_EMAIL` | `admin@ml-dl-ai.local` | Email tài khoản admin |
+| `OWNER_PASSWORD` | — | Mật khẩu tài khoản admin |
+| `PORT` | `8001` | Port (local) |
+
+---
+
+## Chạy cục bộ
+
+```bash
+cd identity_service
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
+
+pip install -r requirements.txt
+cp .env.example .env          # điền JWT_SECRET
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+```
+
+API Docs: `http://localhost:8001/docs`

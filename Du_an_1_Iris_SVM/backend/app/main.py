@@ -1,16 +1,8 @@
 """
-Iris Classification API — Multi-Kernel SVM with SQLite Database & Advanced ML Features.
+Iris Classification API — Multi-Kernel SVM với SQLite & các tính năng ML nâng cao.
 
-Features:
-  - 4 SVM kernel versions (linear, rbf, poly, sigmoid)
-  - SQLite database for user prediction history
-  - Export predictions to Excel (.xlsx)
-  - Decision boundary grid for 2D visualization
-  - Feature 1: Live SVM Hyperparameter Playground (C, gamma, degree)
-  - Feature 2: Support Vectors Inspector (Counts, coordinates, dual coefs, weights)
-  - Feature 3: Kernel Arena (Side-by-side benchmark of all 4 kernels)
-  - Feature 4: Explainable AI (XAI - Feature importance attribution & biology checks)
-  - Feature 5: Batch Prediction (CSV Upload) & Sample CSV generator
+API phân loại hoa Iris dùng 4 kernel SVM (linear, rbf, poly, sigmoid), lưu lịch sử
+dự đoán theo từng user (JWT), xuất Excel, trực quan hóa decision boundary và XAI.
 """
 
 import io
@@ -18,7 +10,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Thêm root directory và repo root vào sys.path để import database và shared.auth
@@ -229,8 +221,6 @@ def predict(data: IrisInput, current_user: dict = Depends(get_current_user)):
         model_version=metadata["model_version"],
     )
 
-
-from datetime import datetime, timezone, timedelta
 
 @app.get("/predictions", response_model=list[PredictionRecord])
 def get_predictions(limit: int = Query(default=50, le=500), current_user: dict = Depends(get_current_user)):
