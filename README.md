@@ -24,25 +24,40 @@ Dự án xây dựng hệ thống phân loại ba loài hoa Iris (*Setosa, Versi
 
 ---
 
-## Kiến trúc hệ thống
+## Kiến trúc hệ thống (Architecture)
+
+Hệ thống hoạt động theo mô hình Microservices tách biệt giữa Định danh (SSO IdP) và Suy luận Máy học:
+1. Người dùng xác thực tập trung tại **identity-service**, nhận JWT mang claim `aud=client_id` (ví dụ: `aud: "iris-svm-api"`).
+2. Frontend đính kèm Bearer JWT này vào mọi request gửi tới **iris-svm-api**.
+3. **iris-svm-api** xác thực chữ ký số độc lập qua dependency dùng chung `shared/auth.py` bằng `JWT_SECRET` và đối sánh `aud == CLIENT_ID`.
 
 ```
-Browser
+Browser (Frontend)
   │
-  ├─► iris-svm-frontend (port 3000)  — HTML / CSS / Canvas API
-  │         │  gửi JWT trong header
-  │         ▼
-  ├─► iris-svm-api      (port 8000)  — FastAPI + 4 mô hình SVM
-  │         │  xác minh JWT qua shared/auth.py
-  │         ▼
-  └─► identity-service  (port 8001)  — IdP/SSO cấp JWT chung cho các dự án
+  ├─► [Đăng nhập/Đăng ký] ─────────► identity-service (port 8001)
+  │                                       │ (Cấp JWT có aud=client_id)
+  │   ◄── Token JWT (aud=iris-svm-api) ───┘
+  │
+  └─► [Request + Bearer JWT] ──────► iris-svm-api (port 8000)
+                                          │ (Xác minh cục bộ qua shared/auth.py)
+                                          ▼
+                                     Trả về kết quả SVM
 ```
 
-| Dịch vụ | Mô tả | Port |
+| Dịch vụ | Vai trò kiến trúc | Port |
 |---|---|---|
-| `identity-service` | Cấp JWT cho mọi dự án trong môn học | 8001 |
-| `iris-svm-api` | Backend SVM, bảo vệ bởi JWT | 8000 |
-| `iris-svm-frontend` | Giao diện web tĩnh | 3000 |
+| `identity-service` | IdP/SSO tập trung: quản lý tài khoản, cấp JWT `aud=client_id` | 8001 |
+| `iris-svm-api` | API suy luận SVM, bảo vệ bởi JWT qua `shared/auth.py` | 8000 |
+| `iris-svm-frontend` | Giao diện tương tác người dùng | 3000 |
+
+---
+
+## Cơ sở toán học & Đánh giá thực nghiệm
+
+- **Quy ước độ rộng lề (Margin convention):** Khoảng cách từ siêu phẳng phân tách đến mỗi siêu phẳng biên là $1/\|w\|$, tổng độ rộng toàn phần của lề phân tách là $M = 2/\|w\|$.
+- **Hành vi tham số phạt C:** Khi $C \to \infty$, bài toán tiến tới tiệm cận lề cứng (Hard Margin); mô hình `sklearn.svm.SVC` sử dụng cơ chế lề mềm (Soft Margin) với mặc định $C=1.0$.
+- **Đánh giá Cross-Validation:** Độ chính xác 5-fold CV (Linear 96.67%, RBF 96.00%, Sigmoid 91.33%, Poly 90.67%) phản ánh hiệu năng xác thực chéo nội bộ, không phải điểm số kiểm thử độc lập (held-out test score); các tham số $C$ và $\gamma$ giữ nguyên giá trị mặc định của scikit-learn (chưa qua tuning). Chênh lệch giữa Linear và RBF nhỏ hơn một độ lệch chuẩn (std ≈ 0.04–0.05), do đó không có kernel nào được tuyên bố là vượt trội tuyệt đối.
+- **Xác suất Platt scaling:** Xác suất dự đoán được tính từ phương pháp hiệu chuẩn Platt scaling và có thể xếp hạng khác với giá trị hàm quyết định; nhãn loài hoa chính thức luôn được xác định trực tiếp từ `model.predict()`.
 
 ---
 
@@ -135,18 +150,20 @@ Mở `http://localhost:3000`
 
 ---
 
-## Biến môi trường
+## Biến môi trường bắt buộc (Required Environment Variables)
 
-| Biến | Dịch vụ | Mô tả |
-|---|---|---|
-| `JWT_SECRET` | identity-service **và** iris-svm-api | Khóa ký JWT — **phải giống nhau ở cả hai** |
-| `CLIENT_IDS` | identity-service | Danh sách client hợp lệ, phân cách bằng dấu phẩy |
-| `CLIENT_ID` | iris-svm-api | ID của service này (`iris-svm-api`) |
-| `FRONTEND_ORIGINS` | identity-service | CORS origins cho frontend |
-| `DATABASE_URL` | iris-svm-api | MySQL URL (để trống = dùng SQLite fallback) |
-| `IDP_DATABASE_URL` | identity-service | SQLite/PostgreSQL cho IdP (mặc định: `identity.db`) |
-| `OWNER_EMAIL` | identity-service | Email tài khoản admin |
-| `OWNER_PASSWORD` | identity-service | Mật khẩu tài khoản admin |
+| Biến | Dịch vụ áp dụng | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `JWT_SECRET` | `identity-service` & `iris-svm-api` | **Bắt buộc** | Khóa ký JWT HMAC-SHA256 (tối thiểu 32 ký tự, phải giống hệt nhau ở cả 2 dịch vụ). |
+| `OWNER_EMAIL` | `identity-service` | **Bắt buộc** | Email tài khoản sở hữu / quản trị hệ thống (chuẩn hóa chữ thường). |
+| `OWNER_PASSWORD` | `identity-service` | **Bắt buộc** | Mật khẩu tài khoản sở hữu (tối thiểu 8 ký tự; nếu bỏ trống sẽ bỏ qua tạo tài khoản owner). |
+| `CLIENT_IDS` | `identity-service` | **Bắt buộc** | Danh sách client ID hợp lệ, phân cách bằng dấu phẩy (vd: `iris-svm-api,breast-cancer-api`). |
+| `CLIENT_ID` | `iris-svm-api` | **Bắt buộc** | ID dịch vụ của API Iris (`iris-svm-api`), dùng xác thực audience (`aud`) trong JWT. |
+| `FRONTEND_ORIGINS` | `identity-service` & `iris-svm-api` | **Bắt buộc** | Danh sách URL frontend được phép truy cập CORS, phân cách bởi dấu phẩy. |
+| `DATABASE_URL` | `iris-svm-api` | Tùy chọn | URL kết nối cơ sở dữ liệu MySQL (để trống = dùng SQLite fallback). |
+| `IDP_DATABASE_URL` | `identity-service` | Tùy chọn | URL SQLite/PostgreSQL cho IdP (mặc định: `identity.db`). |
+
+> **Lưu ý về lưu trữ trên Render (Free Tier):** CSDL SQLite trên gói Render miễn phí là **tạm thời (ephemeral)**. Khi instance restart hoặc sleep sau thời gian không hoạt động, hệ thống tệp đĩa cục bộ sẽ được reset (danh sách tài khoản và lịch sử dự đoán có thể được tạo lại từ cấu hình ban đầu).
 
 ---
 

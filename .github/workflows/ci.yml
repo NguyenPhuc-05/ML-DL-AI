@@ -59,7 +59,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify no leaked secrets or hardcoded passwords
         run: |
-          if grep -rn "identity_service_secret_key\|Admin@ML2024" --include=*.py --include=*.yaml --include=*.yml --include=*.md --include=*.example .; then
+          PATTERN="identity_service_""secret_key"
+          PATTERN2="Admin@""ML2024"
+          if grep -rn "${PATTERN}\|${PATTERN2}" --include=*.py --include=*.yaml --include=*.yml --include=*.md --include=*.example .; then
             echo "Security violation: found hardcoded default secret or password!"
             exit 1
           fi

@@ -190,9 +190,10 @@ def predict(data: IrisInput, current_user: dict = Depends(get_current_user)):
     if not np.isfinite(features).all():
         raise HTTPException(status_code=422, detail="Features must be finite numbers")
 
-    # Single-pass probability inference
-    probs = models[data.kernel].predict_proba(features)[0]
-    prediction_idx = int(np.argmax(probs))
+    # Model decision and probability inference
+    model = models[data.kernel]
+    probs = model.predict_proba(features)[0]
+    prediction_idx = int(model.predict(features)[0])
     label = metadata["class_mapping"].get(str(prediction_idx))
     if label is None:
         raise HTTPException(status_code=500, detail="Model returned an unknown class")
@@ -661,14 +662,14 @@ def kernel_arena():
             "surface": "Siêu phẳng tuyến tính (Flat Hyperplane)",
             "best_for": "Dữ liệu phân tách phẳng, ưu tiên tốc độ suy luận nhanh nhất",
             "math_form": "K(x, x') = x^T x'",
-            "pros": "Cực nhanh, dễ giải thích trọng số vector pháp tuyến w, ít bị Overfitting",
+            "pros": "Cực nhanh, CV 96.67% (chênh lệch với RBF <1 std, không kernel nào vượt trội tuyệt đối), dễ giải thích trọng số w",
             "cons": "Không bắt được đường biên cong phức tạp giữa Versicolor và Virginica",
         },
         "rbf": {
             "surface": "Phi tuyến mượt mà (Gaussian Radial Basis Function)",
             "best_for": "Mọi bài toán phân loại tổng quát (Khuyên dùng chuẩn mực)",
             "math_form": "K(x, x') = exp(-γ ||x - x'||^2)",
-            "pros": "Độ chính xác cao nhất (96.0%), xử lý vùng chồng lấn dữ liệu cực kỳ khéo léo",
+            "pros": "Độ chính xác cao (96.0% CV), phân tách mượt; chênh lệch với Linear <1 độ lệch chuẩn nên không kernel nào vượt trội",
             "cons": "Cần tinh chỉnh siêu tham số C và gamma cẩn thận để tránh Overfitting",
         },
         "poly": {
@@ -744,7 +745,7 @@ def explain_prediction(data: IrisInput, current_user: dict = Depends(get_current
     model = models[data.kernel]
     sample = np.array([[data.sepal_length, data.sepal_width, data.petal_length, data.petal_width]], dtype=float)
     probs = model.predict_proba(sample)[0]
-    pred_idx = int(np.argmax(probs))
+    pred_idx = int(model.predict(sample)[0])
     pred_label = metadata["class_mapping"][str(pred_idx)]
 
     feature_names = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
@@ -810,7 +811,7 @@ def predict_batch(payload: BatchPredictRequest, current_user: dict = Depends(get
         model = models[kernel]
         feats = np.array([[item.sepal_length, item.sepal_width, item.petal_length, item.petal_width]], dtype=float)
         probs = model.predict_proba(feats)[0]
-        pred_idx = int(np.argmax(probs))
+        pred_idx = int(model.predict(feats)[0])
         prob = float(probs[pred_idx])
         label = metadata["class_mapping"][str(pred_idx)]
         status = "Tin cậy cao" if prob >= 0.85 else ("Tin cậy khá" if prob >= 0.65 else "Vùng bất định")

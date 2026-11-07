@@ -444,3 +444,46 @@ def test_stress_test_endpoint():
         assert "robustness_score" in r
         assert "accuracy_on_noisy" in r
         assert "diagnosis" in r
+
+
+def test_label_matches_svm_decision_not_platt_argmax():
+    """Verify that class label strictly equals model.predict() even when Platt scaling probabilities disagree."""
+    from sklearn.datasets import load_iris
+    from app.main import models, metadata
+
+    iris = load_iris()
+    sample = iris.data[72]
+    model = models["poly"]
+    expected_pred_idx = int(model.predict([sample])[0])
+    expected_label = metadata["class_mapping"][str(expected_pred_idx)]
+
+    res = client.post(
+        "/predict",
+        json={
+            "sepal_length": float(sample[0]),
+            "sepal_width": float(sample[1]),
+            "petal_length": float(sample[2]),
+            "petal_width": float(sample[3]),
+            "kernel": "poly",
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["prediction"] == expected_label
+
+    batch_res = client.post(
+        "/predict-batch",
+        json={
+            "samples": [
+                {
+                    "sepal_length": float(sample[0]),
+                    "sepal_width": float(sample[1]),
+                    "petal_length": float(sample[2]),
+                    "petal_width": float(sample[3]),
+                    "kernel": "poly",
+                }
+            ]
+        },
+    )
+    assert batch_res.status_code == 200
+    assert batch_res.json()["predictions"][0]["class_id"] == expected_pred_idx
+    assert batch_res.json()["predictions"][0]["prediction"] == expected_label

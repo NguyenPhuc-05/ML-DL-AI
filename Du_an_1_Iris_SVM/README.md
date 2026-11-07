@@ -1,4 +1,4 @@
-﻿# Đồ Án 1 — Iris AI Explorer: SVM Đa Nhân
+# Đồ Án 1 — Iris AI Explorer: SVM Đa Nhân
 
 > **Học phần:** Học máy Nâng cao  
 > **Sinh viên:** Nguyễn Xuân Phúc — MSSV 3110524025 — Lớp 24CKDL  
@@ -19,24 +19,25 @@ Phân loại ba loài hoa Iris (*Setosa, Versicolor, Virginica*) dựa trên 4 �
 
 ---
 
-## Cơ sở toán học
+## Cơ sở toán học & Đánh giá mô hình
 
 **Bài toán tối ưu SVM (Soft Margin):**
 
 $$\min_{w, b, \xi} \frac{1}{2}\|w\|^2 + C\sum_{i=1}^{N}\xi_i \quad \text{sao cho} \quad y_i(w \cdot \phi(x_i) + b) \ge 1 - \xi_i,\ \xi_i \ge 0$$
 
-Tham số $C$ điều chỉnh đánh đổi giữa độ rộng lề và sai số:  
-- $C$ lớn → phạt nặng sai số, lề hẹp → dễ Overfitting.  
-- $C$ nhỏ → chấp nhận nhiều điểm vi phạm, lề rộng → dễ Underfitting.
+- **Quy ước độ rộng lề (Margin convention):** Khoảng cách từ siêu phẳng phân tách đến mỗi đường biên là $1/\|w\|$, tổng độ rộng lề là $M = 2/\|w\|$.
+- **Hành vi tham số $C$:** Khi $C \to \infty$, bài toán tiệm cận lề cứng (Hard Margin); mô hình `sklearn.svm.SVC` mặc định là Soft Margin với $C=1.0$.
+- **Đánh giá Cross-Validation:** Điểm số CV Accuracy (5-fold) không phải là điểm kiểm thử độc lập (held-out test score); các siêu tham số $C$ và $\gamma$ sử dụng giá trị mặc định của scikit-learn (chưa qua tinh chỉnh / tuning). Độ chính xác giữa Linear (96.67%) và RBF (96.00%) chênh lệch nhỏ hơn 1 độ lệch chuẩn nên không có kernel nào vượt trội tuyệt đối.
+- **Xác suất Platt scaling:** Xác suất trả về đến từ phương pháp hiệu chuẩn Platt scaling và có thể xếp hạng khác với hàm quyết định; nhãn phân loại chính thức luôn được xác định trực tiếp từ `model.predict()`.
 
 **Bốn hàm nhân:**
 
 | Kernel | Biểu thức | Ghi chú |
 |---|---|---|
-| Linear | $K(x,x') = x^T x'$ | Nhanh nhất, dễ giải thích |
-| RBF | $K(x,x') = \exp(-\gamma\|x-x'\|^2)$ | Khuyên dùng mặc định |
-| Polynomial | $K(x,x') = (\gamma x^T x' + r)^d$ | Bắt tương tác bậc cao |
-| Sigmoid | $K(x,x') = \tanh(\gamma x^T x' + r)$ | Tương tự Perceptron 2 lớp |
+| Linear | $K(x,x') = x^T x'$ | Cực nhanh, CV 96.67% (chênh lệch <1 std so với RBF) |
+| RBF | $K(x,x') = \exp(-\gamma\|x-x'\|^2)$ | Phân tách phi tuyến mượt, CV 96.00% |
+| Polynomial | $K(x,x') = (\gamma x^T x' + r)^d$ | Bắt tương tác bậc cao, CV 90.67% |
+| Sigmoid | $K(x,x') = \tanh(\gamma x^T x' + r)$ | Kết nối với mạng nơ-ron Perceptron 2 lớp, CV 91.33% |
 
 ---
 
