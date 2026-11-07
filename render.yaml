@@ -9,7 +9,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.10
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: CLIENT_IDS
         value: iris-svm-api,breast-cancer-api
       - key: FRONTEND_ORIGINS
@@ -17,7 +17,7 @@ services:
       - key: OWNER_EMAIL
         value: admin@ml-dl-ai.local
       - key: OWNER_PASSWORD
-        value: Admin@ML2024!!
+        sync: false
 
   - type: web
     name: iris-svm-api

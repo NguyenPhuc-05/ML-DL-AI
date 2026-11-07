@@ -8,6 +8,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 # HTTP Bearer scheme with auto_error=False to allow clean 401 exceptions
 security = HTTPBearer(auto_error=False)
 
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET or len(JWT_SECRET) < 32:
+    raise RuntimeError("JWT_SECRET environment variable is missing or shorter than 32 characters.")
+
 
 def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
@@ -25,13 +29,12 @@ def get_current_user(
         )
 
     token = credentials.credentials
-    jwt_secret = os.getenv("JWT_SECRET", "identity_service_secret_key")
     expected_client_id = os.getenv("CLIENT_ID", "iris-svm-api")
 
     try:
         payload = jwt.decode(
             token,
-            jwt_secret,
+            JWT_SECRET,
             algorithms=["HS256"],
             audience=expected_client_id,
         )

@@ -74,8 +74,13 @@ def seed_owner():
     Tạo tài khoản chủ sở hữu cố định từ env OWNER_EMAIL + OWNER_PASSWORD.
     Nếu đã tồn tại thì cập nhật is_owner=True. Không thể xóa qua API.
     """
-    owner_email = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local")
-    owner_password = os.getenv("OWNER_PASSWORD", "Admin@ML2024!!")
+    owner_email_raw = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local")
+    owner_email = owner_email_raw.strip().lower()
+    owner_password = os.getenv("OWNER_PASSWORD")
+
+    if not owner_password:
+        print("[IdP Warning] OWNER_PASSWORD is unset. Skipping owner account seeding.")
+        return
 
     db = SessionLocal()
     try:

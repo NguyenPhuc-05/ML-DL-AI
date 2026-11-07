@@ -27,6 +27,10 @@ from shared.auth import get_current_user
 from fastapi import Depends, Security
 from fastapi.security import HTTPBearer
 
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET or len(JWT_SECRET) < 32:
+    raise RuntimeError("JWT_SECRET environment variable is missing or shorter than 32 characters.")
+
 import joblib
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
@@ -857,14 +861,13 @@ def admin_all_predictions(
     credentials=Security(HTTPBearer(auto_error=False)),
 ):
     import jwt as _jwt
-    JWT_SECRET_ADMIN = os.getenv("JWT_SECRET", "identity_service_secret_key")
 
     if credentials is None:
         raise HTTPException(status_code=401, detail="Yêu cầu đăng nhập")
     try:
         payload = _jwt.decode(
             credentials.credentials,
-            JWT_SECRET_ADMIN,
+            JWT_SECRET,
             algorithms=["HS256"],
             options={"verify_aud": False},
         )

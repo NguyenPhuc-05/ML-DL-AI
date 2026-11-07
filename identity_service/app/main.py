@@ -19,7 +19,9 @@ except (ImportError, ModuleNotFoundError):
     from identity_service.app.models import Client, User, init_db
 
 # JWT configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "identity_service_secret_key")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET or len(JWT_SECRET) < 32:
+    raise RuntimeError("JWT_SECRET environment variable is missing or shorter than 32 characters.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_MINUTES = 60
 

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 # Ensure test DB and secret
 os.environ["DATABASE_URL"] = "sqlite:///./test_identity.db"
 os.environ["IDP_DATABASE_URL"] = "sqlite:///./test_identity.db"
-os.environ["JWT_SECRET"] = "test-jwt-secret-12345"
+os.environ["JWT_SECRET"] = "identity-test-jwt-secret-min32chars!!"
 os.environ["CLIENT_IDS"] = "iris-svm-api,breast-cancer-api"
 
 from app.main import app
@@ -18,6 +18,7 @@ def setup_test_db():
     init_db()
     yield
     Base.metadata.drop_all(bind=engine)
+    engine.dispose()
     if os.path.exists("./test_identity.db"):
         try:
             os.remove("./test_identity.db")
@@ -120,7 +121,7 @@ def test_me_unauthorized():
 def test_owner_account_seeded_and_can_access_admin():
     # Login as seeded owner
     owner_email = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local")
-    owner_pwd = os.getenv("OWNER_PASSWORD", "Admin@ML2024!!")
+    owner_pwd = os.getenv("OWNER_PASSWORD", "test-owner-password-12345")
 
     login_res = client.post(
         "/login",
