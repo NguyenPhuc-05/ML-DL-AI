@@ -151,6 +151,43 @@ def test_owner_account_seeded_and_can_access_admin():
     assert any(u["email"] == owner_email and u["is_owner"] is True for u in users)
 
 
+
+
+def test_configured_owner_login_repairs_stale_password_hash(monkeypatch):
+    from app.models import User
+    from app.main import hash_password
+
+    owner_email = "configured-owner@example.com"
+    owner_password = "render-owner-secret-123"
+    monkeypatch.setenv("OWNER_EMAIL", owner_email)
+    monkeypatch.setenv("OWNER_PASSWORD", owner_password)
+
+    # Simulate a stale password hash left behind by an earlier deployment.
+    db = next(iter([]), None)
+    from app.db import SessionLocal
+    db = SessionLocal()
+    try:
+        stale_owner = User(
+            email=owner_email,
+            password_hash=hash_password("old-owner-password"),
+            is_owner=True,
+        )
+        db.add(stale_owner)
+        db.commit()
+    finally:
+        db.close()
+
+    login_res = client.post(
+        "/login",
+        json={
+            "email": owner_email,
+            "password": owner_password,
+            "client_id": "iris-svm-api",
+        },
+    )
+    assert login_res.status_code == 200
+    assert login_res.json()["user"]["is_owner"] is True
+
 def test_regular_user_forbidden_from_admin():
     # Register and login as regular user
     client.post("/register", json={"email": "regular@example.com", "password": "regularpassword123"})
