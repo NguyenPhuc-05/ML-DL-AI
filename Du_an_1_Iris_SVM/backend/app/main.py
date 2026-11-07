@@ -368,7 +368,7 @@ def decision_boundary(
 
 
 # ====================================================================
-# ĐỘT PHÁ 1: SUPPORT VECTORS & KKT MULTIPLIERS INSPECTOR
+# PHẦN 1: SUPPORT VECTORS & KKT MULTIPLIERS INSPECTOR
 # ====================================================================
 @app.get("/support-vectors")
 def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf|poly|sigmoid)$")):
@@ -438,7 +438,7 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
 
 
 # ====================================================================
-# ĐỘT PHÁ MỚI: 3D PCA DECISION SPACE (XOAY 360 ĐỘ)
+# PHẦN 2: 3D PCA DECISION SPACE (XOAY 360 ĐỘ)
 # ====================================================================
 @app.get("/pca-3d")
 def get_pca_3d(
@@ -503,7 +503,7 @@ def get_pca_3d(
 
 
 # ====================================================================
-# ĐỘT PHÁ MỚI: STRESS-TEST & OUTLIER / NOISE ATTACK SIMULATOR
+# PHẦN 3: STRESS-TEST & OUTLIER / NOISE SIMULATOR
 # ====================================================================
 @app.get("/stress-test")
 def stress_test_kernels(
@@ -581,7 +581,7 @@ def stress_test_kernels(
 
 
 # ====================================================================
-# ĐỘT PHÁ 2: LIVE SVM PLAYGROUND
+# PHẦN 4: LIVE SVM PLAYGROUND
 # ====================================================================
 @app.get("/svm-playground")
 def svm_playground(
@@ -647,7 +647,7 @@ def svm_playground(
 
 
 # ====================================================================
-# ĐỘT PHÁ 3: KERNEL ARENA (4-WAY BATTLE BENCHMARK)
+# PHẦN 5: KERNEL BENCHMARK (4-WAY COMPARISON)
 # ====================================================================
 @app.get("/kernel-arena")
 def kernel_arena():
@@ -729,7 +729,7 @@ def kernel_arena():
 
 
 # ====================================================================
-# ĐỘT PHÁ 4: EXPLAINABLE AI (XAI)
+# PHẦN 6: EXPLAINABLE AI (XAI)
 # ====================================================================
 @app.post("/explain")
 def explain_prediction(data: IrisInput, current_user: dict = Depends(get_current_user)):
@@ -792,7 +792,7 @@ def explain_prediction(data: IrisInput, current_user: dict = Depends(get_current
 
 
 # ====================================================================
-# ĐỘT PHÁ 5: BATCH PREDICTION & SAMPLE CSV
+# PHẦN 7: BATCH PREDICTION & SAMPLE CSV
 # ====================================================================
 @app.post("/predict-batch")
 def predict_batch(payload: BatchPredictRequest, current_user: dict = Depends(get_current_user)):

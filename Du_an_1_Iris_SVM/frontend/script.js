@@ -1195,7 +1195,7 @@ async function loadKernelArena() {
             if (cvs) renderMiniBoundary(cvs, item, isDark);
         });
     } catch (e) {
-        if (grid) grid.innerHTML = '<p style="color:var(--text-sec);text-align:center;">Không thể tải dữ liệu đấu trường.</p>';
+        if (grid) grid.innerHTML = '<p style="color:var(--text-sec);text-align:center;">Không thể tải dữ liệu so sánh mô hình.</p>';
     }
 }
 
@@ -2050,13 +2050,13 @@ async function runStressTest() {
 
     if (runBtn) {
         runBtn.disabled = true;
-        runBtn.textContent = '⏳ Đang thử nghiệm độ bền...';
+        runBtn.textContent = '⏳ Đang phân tích...';
     }
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-sec);">Đang tiêm nhiễu Gauss & huấn luyện 4 mô hình SVM đối chứng...</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-sec);">Đang mô phỏng nhiễu Gauss và đánh giá 4 mô hình SVM...</div>';
 
     try {
         const res = await fetch(`${API_BASE}/stress-test?noise_level=${noise}&outliers=${outliers}&seed=42`);
-        if (!res.ok) throw new Error('Không thể chạy stress test');
+        if (!res.ok) throw new Error('Không thể chạy thử nghiệm');
         const data = await res.json();
 
         const kernelColors = {
@@ -2074,14 +2074,14 @@ async function runStressTest() {
                     <div class="stress-card-header">
                         <strong style="text-transform:uppercase; font-size:1rem; color:${color};">${r.kernel}</strong>
                         <span class="xai-badge" style="background:${scoreColor}22; color:${scoreColor}; font-weight:700;">
-                            Độ bền: ${r.robustness_score}/100
+                            Kháng nhiễu: ${r.robustness_score}/100
                         </span>
                     </div>
                     <div class="robustness-meter">
                         <div class="robustness-fill" style="width:${r.robustness_score}%; background:${scoreColor};"></div>
                     </div>
                     <div style="font-size:0.8rem; line-height:1.6; margin:0.6rem 0;">
-                        <div>Độ chính xác sạch: <strong>${r.accuracy_on_clean}%</strong></div>
+                        <div>Độ chính xác gốc: <strong>${r.accuracy_on_clean}%</strong></div>
                         <div>Độ chính xác sau nhiễu: <strong style="color:${scoreColor};">${r.accuracy_on_noisy}%</strong></div>
                         <div>Số Support Vectors: <strong>${r.support_vectors}</strong> điểm</div>
                     </div>
@@ -2096,7 +2096,7 @@ async function runStressTest() {
     } finally {
         if (runBtn) {
             runBtn.disabled = false;
-            runBtn.textContent = '⚡ Chạy Stress-Test So Sánh';
+            runBtn.textContent = '📊 Chạy Thử Nghiệm Kháng Nhiễu';
         }
     }
 }
@@ -2278,28 +2278,28 @@ const TOUR_STEPS = [
     },
     {
         targetId: 'anatomy-wrap',
-        title: '🌸 Sơ đồ Giải phẫu hoa Tương tác',
-        content: 'Khác biệt với các ứng dụng thông thường, sơ đồ SVG này tương tác trực tiếp với các thanh trượt đo lường. Khi kéo hoặc hover vào Sepal hay Petal, phần hoa tương ứng sẽ phát sáng trực quan!'
+        title: '🌸 Sơ đồ Cấu tạo hoa',
+        content: 'Sơ đồ SVG minh họa trực quan 4 thông số hình thái: Đài hoa (Sepal) và Cánh hoa (Petal). Khi điều chỉnh hoặc rê chuột vào thanh trượt, thành phần tương ứng sẽ sáng lên.'
     },
     {
         targetId: 'radar-canvas',
-        title: '📊 Biểu đồ Radar & XAI (Explainable AI)',
-        content: 'Mô hình không chỉ dự đoán mà còn lượng hóa độ nhạy đặc trưng (Feature Sensitivity Attribution), giải thích lý do toán học đằng sau quyết định phân loài hoa.'
+        title: '📊 Biểu đồ Radar & XAI',
+        content: 'Mô hình phân tích độ nhạy của từng đặc trưng (Feature Sensitivity Attribution), giải thích lý do đằng sau kết quả phân loại.'
     },
     {
         targetId: 'tab-data',
-        title: '📈 Bản đồ 2D & Live SVM Playground',
-        content: 'Khám phá ranh giới quyết định (Decision Boundary) của 150 mẫu Iris và điều chỉnh trực tiếp siêu tham số C, γ để quan sát hiện tượng Overfitting/Underfitting theo thời gian thực.'
+        title: '📈 Bản đồ 2D & Siêu tham số',
+        content: 'Khảo sát đường biên phân tách của 150 mẫu hoa và điều chỉnh siêu tham số C, γ để quan sát hiện tượng Overfitting/Underfitting.'
     },
     {
         targetId: 'tab-pca3d',
-        title: '🧊 Không gian 3D PCA (Xoay 360 độ)',
-        content: 'Chiếu giảm chiều từ 4D xuống 3D bảo toàn <strong>99.48% phương sai</strong>. Bạn có thể kéo chuột xoay 360°, quan sát các Support Vectors phát sáng viền vàng trong không gian đa chiều.'
+        title: '🧊 Không gian 3D PCA (Xoay 360°)',
+        content: 'Chiếu giảm chiều từ 4D xuống 3D bảo toàn <strong>99.48% phương sai</strong>. Bạn có thể kéo chuột xoay 360° và quan sát vị trí của các Support Vectors.'
     },
     {
         targetId: 'tab-svm',
-        title: '📐 Điều kiện KKT & Xuất Phiếu Thẩm định',
-        content: 'Phân tích hệ số nhân Lagrange α_i theo định lý Karush-Kuhn-Tucker để phân loại Free SV vs Bounded SV, kèm tính năng xuất <strong>Phiếu Thẩm Định PDF</strong> có mã băm SHA-256.'
+        title: '📐 Điều kiện KKT & Báo cáo kết quả',
+        content: 'Phân tích hệ số nhân Lagrange α_i theo định lý Karush-Kuhn-Tucker để phân loại Free SV vs Bounded SV, cùng chức năng xuất <strong>Báo Cáo Phân Loại (PDF)</strong>.'
     }
 ];
 

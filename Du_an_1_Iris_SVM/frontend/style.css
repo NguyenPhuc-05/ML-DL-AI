@@ -753,7 +753,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: BOTANICAL ANATOMY SVG INTERACTION
+   MÔ ĐUN: BOTANICAL ANATOMY SVG INTERACTION
    ================================================================ */
 .anatomy-wrap {
     background: var(--glass-bg);
@@ -826,7 +826,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: 3D PCA SPACE & VARIANCE BADGES
+   MÔ ĐUN: 3D PCA SPACE & VARIANCE BADGES
    ================================================================ */
 .pca-variance-bar {
     display: flex;
@@ -852,7 +852,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: STRESS-TEST & OUTLIER RESULTS
+   MÔ ĐUN: STRESS-TEST & OUTLIER RESULTS
    ================================================================ */
 .stress-card {
     background: var(--glass-bg);
@@ -890,7 +890,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: KKT INSPECTOR BADGES
+   MÔ ĐUN: KKT INSPECTOR BADGES
    ================================================================ */
 .kkt-badge {
     display: inline-block;
@@ -913,7 +913,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: PHIẾU THẨM ĐỊNH MẪU (CERTIFICATE MODAL)
+   MÔ ĐUN: BÁO CÁO PHÂN LOẠI MẪU (AUDIT REPORT MODAL)
    ================================================================ */
 .certificate-modal {
     position: fixed;
@@ -1188,7 +1188,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
 }
 
 /* ================================================================
-   TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO: GUIDED TOUR OVERLAY
+   MÔ ĐUN: GUIDED TOUR OVERLAY
    ================================================================ */
 .tour-overlay {
     position: fixed;

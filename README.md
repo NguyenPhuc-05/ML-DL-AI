@@ -13,12 +13,12 @@ Dự án xây dựng hệ thống phân loại ba loài hoa Iris (*Setosa, Versi
 
 - **Không gian 3D PCA (Xoay 360°)** — Phép chiếu giảm chiều 4D → 3D bảo toàn **99.48% phương sai**, trực quan hóa không gian đa chiều, mặt phân cách và các Support Vectors với camera xoay tự do.
 - **KKT & Lagrange Multipliers ($\alpha_i$) Inspector** — Phân tích bài toán đối ngẫu và phân loại Support Vectors thành *Free SV* ($0 < \alpha_i < C$) và *Bounded SV* ($\alpha_i = C$) theo định lý Karush-Kuhn-Tucker.
-- **Stress-Test & Outlier Attack Simulator** — Giả lập nhiễu Gauss và chèn điểm ngoại lai đối kháng để kiểm chứng và xếp hạng độ bền (Robustness Score) của 4 kernel.
-- **Interactive Botanical Anatomy** — Sơ đồ giải phẫu hoa Iris (SVG) tương tác thời gian thực với thanh trượt đo đạc Sepal/Petal.
-- **Phiếu Thẩm Định Dự Đoán (Official Audit Certificate)** — Xuất báo cáo kiểm định học thuật định dạng in ấn/PDF với mã băm toàn vẹn SHA-256 và chữ ký điện tử.
-- **Chế độ Guided Tour** — Thuyết minh đồ án tương tác dẫn dắt giảng viên/người xem qua từng góc nhìn thực nghiệm của sinh viên.
-- **Live SVM Playground** — Điều chỉnh C, γ, degree theo thời gian thực và nhận chẩn đoán Overfitting/Underfitting.
-- **Kernel Arena** — So sánh song song 4 kernel về độ chính xác CV, latency và decision boundary.
+- **Kiểm thử độ vững mô hình (Robustness Test)** — Mô phỏng nhiễu Gauss và điểm ngoại lai để đánh giá khả năng kháng nhiễu của 4 kernel.
+- **Sơ đồ cấu tạo hoa tương tác** — Đồ họa SVG trực quan hóa vị trí đo đạc Sepal/Petal đồng bộ thời gian thực với thanh trượt.
+- **Báo cáo phân loại mẫu hoa (Audit Report & PDF)** — Xuất báo cáo kết quả phân loại định dạng in ấn/PDF với mã băm toàn vẹn SHA-256 và chữ ký điện tử.
+- **Chế độ Hướng dẫn tính năng** — Thuyết minh trực quan giúp người xem nhanh chóng nắm bắt các chức năng của hệ thống.
+- **Live SVM Playground** — Khảo sát ảnh hưởng của siêu tham số C, γ theo thời gian thực và chẩn đoán Overfitting/Underfitting.
+- **Kernel Benchmark** — Bảng đối sánh thực nghiệm 4 hàm nhân SVM về độ chính xác CV, latency và decision boundary.
 - **Explainable AI (XAI)** — Phân tích độ nhạy nhiễu (Sensitivity Attribution) giải thích lý do đưa ra kết quả.
 - **Batch CSV & Database** — Phân loại hàng loạt mẫu từ file CSV, xuất kết quả Excel và lưu trữ CSDL.
 
