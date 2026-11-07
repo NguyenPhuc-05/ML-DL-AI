@@ -340,6 +340,7 @@ let supportVectorsData = null;
 let showSupportVectors = true;
 let pgDebounceTimer = null;
 let batchPredictionsData = [];
+let historyData = [];
 
 // ================================================================
 // 1. INITIALIZATION
@@ -1435,6 +1436,7 @@ async function loadHistoryFromDB() {
 }
 
 function renderHistoryTable(history) {
+    historyData = Array.isArray(history) ? history : [];
     const tbody = document.getElementById('hist-body');
     const empty = document.getElementById('hist-empty');
     if (!tbody || !empty) return;

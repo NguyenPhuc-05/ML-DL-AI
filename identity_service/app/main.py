@@ -195,14 +195,20 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     # password hash (or the row was lost during an ephemeral SQLite restart).
     normalized_email = payload.email.strip().lower()
     owner_email = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local").strip().lower()
-    configured_owner_password = os.getenv("OWNER_PASSWORD")
+    raw_owner_password = os.getenv("OWNER_PASSWORD") or ""
     user = db.query(User).filter(User.email == normalized_email).first()
 
-    is_configured_owner = (
-        normalized_email == owner_email
-        and bool(configured_owner_password)
-        and hmac.compare_digest(payload.password, configured_owner_password)
+    # Compare as bytes: hmac.compare_digest raises TypeError for str arguments
+    # containing non-ASCII characters, which turned a valid owner login into a
+    # 500 error. Also accept the secret with stray leading/trailing whitespace
+    # removed, since copy-pasting a secret into Render often adds a newline.
+    submitted_bytes = payload.password.encode("utf-8")
+    owner_candidates = {raw_owner_password, raw_owner_password.strip()} - {""}
+    is_configured_owner = normalized_email == owner_email and any(
+        hmac.compare_digest(submitted_bytes, candidate.encode("utf-8"))
+        for candidate in owner_candidates
     )
+    configured_owner_password = payload.password if is_configured_owner else None
 
     if is_configured_owner:
         if user is None:

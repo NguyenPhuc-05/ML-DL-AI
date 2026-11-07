@@ -187,6 +187,45 @@ def test_configured_owner_login_repairs_stale_password_hash(monkeypatch):
     assert login_res.status_code == 200
     assert login_res.json()["user"]["is_owner"] is True
 
+def test_configured_owner_login_with_non_ascii_password(monkeypatch):
+    owner_email = "unicode-owner@example.com"
+    owner_password = "mậtkhẩu-quản-trị-123"
+    monkeypatch.setenv("OWNER_EMAIL", owner_email)
+    monkeypatch.setenv("OWNER_PASSWORD", owner_password)
+
+    login_res = client.post(
+        "/login",
+        json={"email": owner_email, "password": owner_password, "client_id": "iris-svm-api"},
+    )
+    assert login_res.status_code == 200
+    assert login_res.json()["user"]["is_owner"] is True
+
+
+def test_configured_owner_login_tolerates_whitespace_in_env_secret(monkeypatch):
+    owner_email = "spaced-owner@example.com"
+    monkeypatch.setenv("OWNER_EMAIL", owner_email)
+    monkeypatch.setenv("OWNER_PASSWORD", "render-owner-secret-123\n")
+
+    login_res = client.post(
+        "/login",
+        json={"email": owner_email, "password": "render-owner-secret-123", "client_id": "iris-svm-api"},
+    )
+    assert login_res.status_code == 200
+    assert login_res.json()["user"]["is_owner"] is True
+
+
+def test_configured_owner_wrong_password_rejected(monkeypatch):
+    owner_email = "strict-owner@example.com"
+    monkeypatch.setenv("OWNER_EMAIL", owner_email)
+    monkeypatch.setenv("OWNER_PASSWORD", "render-owner-secret-123")
+
+    login_res = client.post(
+        "/login",
+        json={"email": owner_email, "password": "wrong-password-xyz", "client_id": "iris-svm-api"},
+    )
+    assert login_res.status_code == 401
+
+
 def test_regular_user_forbidden_from_admin():
     # Register and login as regular user
     client.post("/register", json={"email": "regular@example.com", "password": "regularpassword123"})
