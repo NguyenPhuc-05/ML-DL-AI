@@ -2167,15 +2167,28 @@ function initCertificateModal() {
     const backdrop = document.getElementById('certificate-backdrop');
     const printBtn = document.getElementById('print-certificate-btn');
 
+    const closeModal = () => {
+        if (modal) {
+            modal.hidden = true;
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+    };
+
     if (openBtn) {
         openBtn.addEventListener('click', openInspectionCertificate);
     }
-    if (closeBtn && modal) {
-        closeBtn.addEventListener('click', () => modal.hidden = true);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
     }
-    if (backdrop && modal) {
-        backdrop.addEventListener('click', () => modal.hidden = true);
+    if (backdrop) {
+        backdrop.addEventListener('click', closeModal);
     }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+            closeModal();
+        }
+    });
     if (printBtn) {
         printBtn.addEventListener('click', () => window.print());
     }
@@ -2250,6 +2263,8 @@ async function openInspectionCertificate() {
     }
 
     modal.hidden = false;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
 }
 
 // ================================================================
@@ -2325,13 +2340,21 @@ function initGuidedTour() {
 function startGuidedTour() {
     currentTourIndex = 0;
     const overlay = document.getElementById('tour-overlay');
-    if (overlay) overlay.hidden = false;
+    if (overlay) {
+        overlay.hidden = false;
+        overlay.style.display = 'block';
+        overlay.classList.add('show');
+    }
     renderTourStep();
 }
 
 function closeGuidedTour() {
     const overlay = document.getElementById('tour-overlay');
-    if (overlay) overlay.hidden = true;
+    if (overlay) {
+        overlay.hidden = true;
+        overlay.style.display = 'none';
+        overlay.classList.remove('show');
+    }
     document.querySelectorAll('.tour-highlight-target').forEach(el => el.classList.remove('tour-highlight-target'));
 }
 

@@ -919,11 +919,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
     position: fixed;
     inset: 0;
     z-index: 9999;
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
     padding: 1.5rem;
     overflow-y: auto;
+}
+
+.certificate-modal.show {
+    display: flex !important;
+}
+
+.certificate-modal[hidden] {
+    display: none !important;
 }
 
 .certificate-backdrop {
@@ -1186,7 +1194,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:
     position: fixed;
     inset: 0;
     z-index: 10000;
+    display: none;
     pointer-events: none;
+}
+
+.tour-overlay.show {
+    display: block !important;
+}
+
+.tour-overlay[hidden] {
+    display: none !important;
 }
 
 .tour-backdrop {
