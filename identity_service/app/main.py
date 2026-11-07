@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Centralized Identity Provider (IdP)",
-    description="Unified SSO Identity Provider for ML-DL-AI Projects",
+    description="Unified SSO Identity Provider for All Projects",
     version="1.0.0",
     lifespan=lifespan,
 )
