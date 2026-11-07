@@ -80,6 +80,14 @@ def test_register_duplicate_email():
     assert "Email đã được đăng ký" in duplicate_res.json()["detail"]
 
 
+def test_register_short_password_rejected():
+    res = client.post(
+        "/register",
+        json={"email": "shortpass@example.com", "password": "short"},
+    )
+    assert res.status_code == 422
+
+
 def test_login_wrong_password():
     client.post(
         "/register",
