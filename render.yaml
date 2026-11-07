@@ -2,6 +2,7 @@ services:
   - type: web
     name: identity-service
     env: python
+    plan: free 
     rootDir: identity_service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -22,6 +23,7 @@ services:
   - type: web
     name: iris-svm-api
     env: python
+    plan: free 
     buildCommand: pip install -r Du_an_1_Iris_SVM/backend/requirements.txt
     startCommand: uvicorn backend.app.main:app --app-dir Du_an_1_Iris_SVM --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
