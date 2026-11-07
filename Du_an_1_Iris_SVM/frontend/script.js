@@ -12,7 +12,7 @@ const API_BASE = isLocal
 
 const IDP_API_URL = isLocal
     ? 'http://127.0.0.1:8001'
-    : 'https://identity-service.onrender.com'; // TODO: set real Render URL
+    : 'https://identity-service-0lph.onrender.com'; // URL trên render
 
 const CLIENT_ID = 'iris-svm-api';
 
@@ -21,7 +21,7 @@ async function fetchAuth(endpoint, options = {}) {
     const authErr = document.getElementById('auth-error');
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         const res = await fetch(`${IDP_API_URL}${endpoint}`, {
             ...options,
             signal: controller.signal
@@ -43,15 +43,15 @@ async function fetchAuth(endpoint, options = {}) {
 // ─── Feature Config ───
 const FEATURES = [
     { key: 'sepal-length', api: 'sepal_length', label: 'Sepal Length', min: 4.0, max: 8.0 },
-    { key: 'sepal-width',  api: 'sepal_width',  label: 'Sepal Width',  min: 2.0, max: 5.0 },
-    { key: 'petal-length', api: 'petal_length',  label: 'Petal Length', min: 1.0, max: 7.0 },
-    { key: 'petal-width',  api: 'petal_width',   label: 'Petal Width',  min: 0.1, max: 3.0 }
+    { key: 'sepal-width', api: 'sepal_width', label: 'Sepal Width', min: 2.0, max: 5.0 },
+    { key: 'petal-length', api: 'petal_length', label: 'Petal Length', min: 1.0, max: 7.0 },
+    { key: 'petal-width', api: 'petal_width', label: 'Petal Width', min: 0.1, max: 3.0 }
 ];
 
 const PRESETS = {
-    setosa:     { 'sepal-length': 5.0, 'sepal-width': 3.4, 'petal-length': 1.5, 'petal-width': 0.2 },
+    setosa: { 'sepal-length': 5.0, 'sepal-width': 3.4, 'petal-length': 1.5, 'petal-width': 0.2 },
     versicolor: { 'sepal-length': 5.9, 'sepal-width': 2.8, 'petal-length': 4.3, 'petal-width': 1.3 },
-    virginica:  { 'sepal-length': 6.7, 'sepal-width': 3.1, 'petal-length': 5.6, 'petal-width': 2.4 }
+    virginica: { 'sepal-length': 6.7, 'sepal-width': 3.1, 'petal-length': 5.6, 'petal-width': 2.4 }
 };
 
 const BOTANICAL = {
@@ -85,21 +85,21 @@ const BOTANICAL = {
 };
 
 const IRIS_DATA = [
-    [1.4,0.2,0],[1.4,0.2,0],[1.3,0.2,0],[1.5,0.2,0],[1.4,0.2,0],[1.7,0.4,0],[1.4,0.3,0],[1.5,0.2,0],[1.4,0.2,0],[1.5,0.1,0],
-    [1.5,0.2,0],[1.6,0.2,0],[1.4,0.1,0],[1.1,0.1,0],[1.2,0.2,0],[1.5,0.4,0],[1.3,0.4,0],[1.4,0.3,0],[1.7,0.3,0],[1.5,0.3,0],
-    [1.7,0.2,0],[1.5,0.4,0],[1.0,0.2,0],[1.7,0.5,0],[1.9,0.2,0],[1.6,0.2,0],[1.6,0.4,0],[1.5,0.2,0],[1.4,0.2,0],[1.6,0.2,0],
-    [1.6,0.2,0],[1.5,0.4,0],[1.5,0.1,0],[1.4,0.2,0],[1.5,0.2,0],[1.2,0.2,0],[1.3,0.2,0],[1.4,0.1,0],[1.3,0.2,0],[1.5,0.2,0],
-    [1.3,0.3,0],[1.3,0.3,0],[1.3,0.2,0],[1.6,0.6,0],[1.9,0.4,0],[1.4,0.3,0],[1.6,0.2,0],[1.4,0.2,0],[1.5,0.2,0],[1.4,0.2,0],
-    [4.7,1.4,1],[4.5,1.5,1],[4.9,1.5,1],[4.0,1.3,1],[4.6,1.5,1],[4.5,1.3,1],[4.7,1.6,1],[3.3,1.0,1],[4.6,1.3,1],[3.9,1.4,1],
-    [3.5,1.0,1],[4.2,1.5,1],[4.0,1.0,1],[4.7,1.4,1],[3.6,1.3,1],[4.4,1.4,1],[4.5,1.5,1],[4.1,1.0,1],[4.5,1.5,1],[3.9,1.1,1],
-    [4.8,1.8,1],[4.0,1.3,1],[4.9,1.5,1],[4.7,1.2,1],[4.3,1.3,1],[4.4,1.4,1],[4.8,1.4,1],[5.0,1.7,1],[4.5,1.5,1],[3.5,1.0,1],
-    [3.8,1.1,1],[3.7,1.0,1],[3.9,1.2,1],[5.1,1.6,1],[4.5,1.5,1],[4.5,1.6,1],[4.7,1.5,1],[4.4,1.3,1],[4.1,1.3,1],[4.0,1.3,1],
-    [4.4,1.2,1],[4.6,1.4,1],[4.0,1.2,1],[3.3,1.0,1],[4.2,1.3,1],[4.2,1.2,1],[4.2,1.3,1],[4.3,1.3,1],[3.0,1.1,1],[4.1,1.3,1],
-    [6.0,2.5,2],[5.1,1.9,2],[5.9,2.1,2],[5.6,1.8,2],[5.8,2.2,2],[6.6,2.1,2],[4.5,1.7,2],[6.3,1.8,2],[5.8,1.8,2],[6.1,2.5,2],
-    [5.1,2.0,2],[5.3,1.9,2],[5.5,2.1,2],[5.0,2.0,2],[5.1,2.4,2],[5.3,2.3,2],[5.5,1.8,2],[6.7,2.2,2],[6.9,2.3,2],[5.0,1.5,2],
-    [5.7,2.3,2],[4.9,2.0,2],[6.7,2.0,2],[4.9,1.8,2],[5.7,2.1,2],[6.0,1.8,2],[4.8,1.8,2],[4.9,1.8,2],[5.6,2.1,2],[5.8,1.6,2],
-    [6.1,1.9,2],[6.4,2.0,2],[5.6,2.2,2],[5.1,1.5,2],[5.6,1.4,2],[6.1,2.3,2],[5.6,2.4,2],[5.5,1.8,2],[4.8,1.8,2],[5.4,2.1,2],
-    [5.6,2.4,2],[5.1,2.3,2],[5.1,1.9,2],[5.9,2.3,2],[5.7,2.5,2],[5.2,2.3,2],[5.0,1.9,2],[5.2,2.0,2],[5.4,2.3,2],[5.1,1.8,2]
+    [1.4, 0.2, 0], [1.4, 0.2, 0], [1.3, 0.2, 0], [1.5, 0.2, 0], [1.4, 0.2, 0], [1.7, 0.4, 0], [1.4, 0.3, 0], [1.5, 0.2, 0], [1.4, 0.2, 0], [1.5, 0.1, 0],
+    [1.5, 0.2, 0], [1.6, 0.2, 0], [1.4, 0.1, 0], [1.1, 0.1, 0], [1.2, 0.2, 0], [1.5, 0.4, 0], [1.3, 0.4, 0], [1.4, 0.3, 0], [1.7, 0.3, 0], [1.5, 0.3, 0],
+    [1.7, 0.2, 0], [1.5, 0.4, 0], [1.0, 0.2, 0], [1.7, 0.5, 0], [1.9, 0.2, 0], [1.6, 0.2, 0], [1.6, 0.4, 0], [1.5, 0.2, 0], [1.4, 0.2, 0], [1.6, 0.2, 0],
+    [1.6, 0.2, 0], [1.5, 0.4, 0], [1.5, 0.1, 0], [1.4, 0.2, 0], [1.5, 0.2, 0], [1.2, 0.2, 0], [1.3, 0.2, 0], [1.4, 0.1, 0], [1.3, 0.2, 0], [1.5, 0.2, 0],
+    [1.3, 0.3, 0], [1.3, 0.3, 0], [1.3, 0.2, 0], [1.6, 0.6, 0], [1.9, 0.4, 0], [1.4, 0.3, 0], [1.6, 0.2, 0], [1.4, 0.2, 0], [1.5, 0.2, 0], [1.4, 0.2, 0],
+    [4.7, 1.4, 1], [4.5, 1.5, 1], [4.9, 1.5, 1], [4.0, 1.3, 1], [4.6, 1.5, 1], [4.5, 1.3, 1], [4.7, 1.6, 1], [3.3, 1.0, 1], [4.6, 1.3, 1], [3.9, 1.4, 1],
+    [3.5, 1.0, 1], [4.2, 1.5, 1], [4.0, 1.0, 1], [4.7, 1.4, 1], [3.6, 1.3, 1], [4.4, 1.4, 1], [4.5, 1.5, 1], [4.1, 1.0, 1], [4.5, 1.5, 1], [3.9, 1.1, 1],
+    [4.8, 1.8, 1], [4.0, 1.3, 1], [4.9, 1.5, 1], [4.7, 1.2, 1], [4.3, 1.3, 1], [4.4, 1.4, 1], [4.8, 1.4, 1], [5.0, 1.7, 1], [4.5, 1.5, 1], [3.5, 1.0, 1],
+    [3.8, 1.1, 1], [3.7, 1.0, 1], [3.9, 1.2, 1], [5.1, 1.6, 1], [4.5, 1.5, 1], [4.5, 1.6, 1], [4.7, 1.5, 1], [4.4, 1.3, 1], [4.1, 1.3, 1], [4.0, 1.3, 1],
+    [4.4, 1.2, 1], [4.6, 1.4, 1], [4.0, 1.2, 1], [3.3, 1.0, 1], [4.2, 1.3, 1], [4.2, 1.2, 1], [4.2, 1.3, 1], [4.3, 1.3, 1], [3.0, 1.1, 1], [4.1, 1.3, 1],
+    [6.0, 2.5, 2], [5.1, 1.9, 2], [5.9, 2.1, 2], [5.6, 1.8, 2], [5.8, 2.2, 2], [6.6, 2.1, 2], [4.5, 1.7, 2], [6.3, 1.8, 2], [5.8, 1.8, 2], [6.1, 2.5, 2],
+    [5.1, 2.0, 2], [5.3, 1.9, 2], [5.5, 2.1, 2], [5.0, 2.0, 2], [5.1, 2.4, 2], [5.3, 2.3, 2], [5.5, 1.8, 2], [6.7, 2.2, 2], [6.9, 2.3, 2], [5.0, 1.5, 2],
+    [5.7, 2.3, 2], [4.9, 2.0, 2], [6.7, 2.0, 2], [4.9, 1.8, 2], [5.7, 2.1, 2], [6.0, 1.8, 2], [4.8, 1.8, 2], [4.9, 1.8, 2], [5.6, 2.1, 2], [5.8, 1.6, 2],
+    [6.1, 1.9, 2], [6.4, 2.0, 2], [5.6, 2.2, 2], [5.1, 1.5, 2], [5.6, 1.4, 2], [6.1, 2.3, 2], [5.6, 2.4, 2], [5.5, 1.8, 2], [4.8, 1.8, 2], [5.4, 2.1, 2],
+    [5.6, 2.4, 2], [5.1, 2.3, 2], [5.1, 1.9, 2], [5.9, 2.3, 2], [5.7, 2.5, 2], [5.2, 2.3, 2], [5.0, 1.9, 2], [5.2, 2.0, 2], [5.4, 2.3, 2], [5.1, 1.8, 2]
 ];
 
 // ─── Constants & State ───
@@ -113,7 +113,7 @@ function parseJwtPayload(token) {
     try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         return JSON.parse(jsonPayload);
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const authTitle = document.getElementById('auth-title');
     const authSubmitBtn = document.getElementById('auth-submit-btn');
     const authError = document.getElementById('auth-error');
-    
+
     let isLoginMode = true;
 
     function checkAuth() {
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if(authSwitchBtn) {
+    if (authSwitchBtn) {
         authSwitchBtn.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             authError.hidden = true;
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if(authForm) {
+    if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('auth-user').value.trim();
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify({ email, password, client_id: CLIENT_ID })
                     });
                     const data = await res.json();
-                    
+
                     if (!res.ok) {
                         authError.textContent = data.detail || 'Sai thông tin đăng nhập hoặc client_id không hợp lệ';
                         authError.hidden = false;
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify({ email, password })
                     });
                     const data = await res.json();
-                    
+
                     if (!res.ok) {
                         authError.textContent = data.detail || 'Đã có lỗi khi đăng ký';
                         authError.hidden = false;
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.triggerLogout = triggerLogout;
 
-    if(logoutBtn) {
+    if (logoutBtn) {
         logoutBtn.addEventListener('click', triggerLogout);
     }
     const profileSignoutBtn = document.getElementById('profile-signout-btn');
@@ -565,11 +565,11 @@ async function doPredict() {
 
         highlightCard(species, data.probability);
         showBotanical(species, data.probability, data.kernel);
-            triggerConfetti(species);
+        triggerConfetti(species);
 
         // Fetch Explainable AI (XAI)
         fetchXaiExplanation(body);
-        
+
         // Refresh history
         loadHistoryFromDB();
 
@@ -649,7 +649,7 @@ function showBotanical(species, prob, kernel) {
 
     const imgEl = document.getElementById('bot-img');
     if (imgEl && b.image) {
-        imgEl.onerror = function() {
+        imgEl.onerror = function () {
             if (b.fallback && this.src !== b.fallback) {
                 this.src = b.fallback;
             }
@@ -657,7 +657,7 @@ function showBotanical(species, prob, kernel) {
         imgEl.src = b.image;
         imgEl.alt = b.name;
     }
-    
+
     panel.style.display = 'block';
 
     const setText = (id, txt) => {
@@ -769,9 +769,9 @@ function drawRadar() {
     // Informative labels & live values with smart alignment
     const meta = [
         { label: 'Sepal Length (Dài đài)', align: 'center', dx: 0, dy: -24, valDy: -10 },
-        { label: 'Sepal Width (Rộng đài)', align: 'left',   dx: 14, dy: -6,  valDy: 9 },
-        { label: 'Petal Length (Dài cánh)', align: 'center', dx: 0, dy: 16,  valDy: 30 },
-        { label: 'Petal Width (Rộng cánh)', align: 'right',  dx: -14, dy: -6, valDy: 9 }
+        { label: 'Sepal Width (Rộng đài)', align: 'left', dx: 14, dy: -6, valDy: 9 },
+        { label: 'Petal Length (Dài cánh)', align: 'center', dx: 0, dy: 16, valDy: 30 },
+        { label: 'Petal Width (Rộng cánh)', align: 'right', dx: -14, dy: -6, valDy: 9 }
     ];
 
     for (let i = 0; i < n; i++) {
@@ -1452,8 +1452,8 @@ function initClearHistory() {
     if (!btn) return;
     btn.addEventListener('click', async () => {
         if (!confirm('Xóa toàn bộ lịch sử dự đoán trong database?')) return;
-        try { await fetch(`${API_BASE}/predictions`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + authToken } }); } catch {}
-            currentPrediction = null;
+        try { await fetch(`${API_BASE}/predictions`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + authToken } }); } catch { }
+        currentPrediction = null;
         SPECIES_NAMES.forEach(s => {
             document.getElementById(`card-${s}`)?.classList.remove('highlighted', 'dimmed');
         });
@@ -1481,7 +1481,7 @@ function initExportExcel() {
                 a.download = 'iris_predictions.xlsx';
                 a.click();
                 URL.revokeObjectURL(url);
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
         });
@@ -1615,7 +1615,7 @@ async function checkApiHealth() {
         try {
             const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(15000) });
             if (res.ok) { setApiStatus('online', 'API sẵn sàng'); return; }
-        } catch {}
+        } catch { }
         if (i < 4) await new Promise(r => setTimeout(r, 3000 * i));
     }
     setApiStatus('offline', 'API đang bảo trì');
@@ -1677,9 +1677,9 @@ async function loadAdminData() {
                                 ${u.is_owner ? ' <span style="background:#f59e0b;color:#000;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:bold;margin-left:4px;">Chủ sở hữu</span>' : ''}
                             </td>
                             <td>
-                                ${u.is_owner 
-                                    ? '<span style="color:#f59e0b;font-weight:600;">👑 Chủ sở hữu (Cố định)</span>' 
-                                    : '<span style="color:var(--text-sec);">Người dùng</span>'}
+                                ${u.is_owner
+                            ? '<span style="color:#f59e0b;font-weight:600;">👑 Chủ sở hữu (Cố định)</span>'
+                            : '<span style="color:var(--text-sec);">Người dùng</span>'}
                             </td>
                             <td>${formatDateTime(u.created_at)}</td>
                             <td>${formatDateTime(u.last_login_at)}</td>
