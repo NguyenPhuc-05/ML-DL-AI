@@ -39,6 +39,31 @@ async function fetchAuth(endpoint, options = {}) {
     }
 }
 
+// Kiểm tra token tại IdP trước khi kết luận phiên đăng nhập đã hết hạn.
+// Nếu IdP vẫn chấp nhận token nhưng Iris API trả 401 thì cần kiểm tra cấu hình JWT giữa hai dịch vụ.
+async function isIdentityTokenValid() {
+    if (!authToken) return false;
+    try {
+        const res = await fetchAuth('/me', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        return res.ok;
+    } catch (error) {
+        console.warn('Không thể xác minh phiên với Identity Service:', error);
+        return null;
+    }
+}
+
+function showApiAuthConfigurationError() {
+    const message = 'Iris API từ chối token nhưng Identity Service vẫn xác nhận phiên hợp lệ. Hãy kiểm tra JWT_SECRET phải giống hệt nhau ở Render của identity-service và iris-svm-api; CLIENT_ID của API phải là iris-svm-api.';
+    const errorEl = document.getElementById('error-msg');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+    }
+    console.error(message);
+}
+
 
 // ─── Feature Config ───
 const FEATURES = [
@@ -550,10 +575,14 @@ async function doPredict() {
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             if (res.status === 401) {
-                alert("Phiên đăng nhập đã hết hạn hoặc tài khoản không tồn tại. Vui lòng đăng nhập lại.");
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
+                const identityValid = await isIdentityTokenValid();
+                if (identityValid === true) {
+                    showApiAuthConfigurationError();
+                } else if (identityValid === false) {
+                    if (window.triggerLogout) window.triggerLogout();
+                } else {
+                    throw new Error('Chưa xác minh được phiên đăng nhập do Identity Service tạm thời không phản hồi. Vui lòng thử lại.');
+                }
                 return;
             }
             throw new Error(err.detail || `Lỗi ${res.status}`);
@@ -1382,7 +1411,19 @@ async function loadHistoryFromDB() {
     try {
         const res = await fetch(`${API_BASE}/predictions?limit=50`, { headers: { 'Authorization': 'Bearer ' + authToken } });
         if (res.status === 401) {
-            if (window.triggerLogout) window.triggerLogout();
+            const identityValid = await isIdentityTokenValid();
+            if (identityValid === false) {
+                if (window.triggerLogout) window.triggerLogout();
+            } else if (identityValid === true) {
+                renderHistoryTable([]);
+                const empty = document.getElementById('hist-empty');
+                if (empty) {
+                    empty.textContent = 'Không tải được lịch sử: Iris API từ chối JWT. Kiểm tra JWT_SECRET và CLIENT_ID trên Render.';
+                    empty.style.display = 'block';
+                }
+                showApiAuthConfigurationError();
+            }
+            // Nếu IdP tạm thời không phản hồi, giữ nguyên phiên và cho phép thử lại.
             return;
         }
         if (!res.ok) throw new Error();
