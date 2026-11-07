@@ -22,9 +22,9 @@ services:
   - type: web
     name: iris-svm-api
     env: python
-    rootDir: Du_an_1_Iris_SVM
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r Du_an_1_Iris_SVM/backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --app-dir Du_an_1_Iris_SVM --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10

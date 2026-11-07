@@ -897,8 +897,3 @@ def admin_all_predictions(
         ]
     finally:
         db.close()
-
-# ─── Centralized IdP Unified Endpoints ───
-# Đảm bảo hệ thống hoạt động xuyên suốt 100% trên cả Local và Render
-from database.idp import idp_router
-app.include_router(idp_router)

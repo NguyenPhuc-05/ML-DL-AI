@@ -12,31 +12,31 @@ const API_BASE = isLocal
 
 const IDP_API_URL = isLocal
     ? 'http://127.0.0.1:8001'
-    : (localStorage.getItem('custom_idp_url') || window.IDP_API_URL || 'https://identity-service.onrender.com');
+    : 'https://identity-service.onrender.com'; // TODO: set real Render URL
 
 const CLIENT_ID = 'iris-svm-api';
 
-// ─── Smart Auth Fetcher with Auto-Fallback ───
-// Tự động thử Identity Service độc lập trước, nếu chưa online thì fallback sang API_BASE
+// ─── Identity Service Auth Fetcher ───
 async function fetchAuth(endpoint, options = {}) {
-    if (IDP_API_URL && IDP_API_URL !== API_BASE) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
-            const res = await fetch(`${IDP_API_URL}${endpoint}`, {
-                ...options,
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            if (res.status !== 404 && res.status !== 502 && res.status !== 503) {
-                return res;
-            }
-            console.warn(`IDP ${IDP_API_URL}${endpoint} returned ${res.status}, falling back to ${API_BASE}`);
-        } catch (e) {
-            console.warn(`IDP ${IDP_API_URL}${endpoint} unreachable, falling back to ${API_BASE}:`, e.message);
+    const authErr = document.getElementById('auth-error');
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`${IDP_API_URL}${endpoint}`, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return res;
+    } catch (e) {
+        if (authErr) {
+            authErr.textContent = 'Identity service unavailable, try again';
+            authErr.hidden = false;
+            authErr.style.background = 'rgba(239, 68, 68, 0.15)';
+            authErr.style.color = '#ef4444';
         }
+        throw e;
     }
-    return await fetch(`${API_BASE}${endpoint}`, options);
 }
 
 
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (err) {
-                authError.textContent = 'Lỗi kết nối tới Identity Service (IdP)';
+                authError.textContent = 'Identity service unavailable, try again';
                 authError.hidden = false;
                 authError.style.background = 'rgba(239, 68, 68, 0.15)';
                 authError.style.color = '#ef4444';
