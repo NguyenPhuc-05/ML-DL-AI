@@ -1492,7 +1492,7 @@ function initMagneticCards() {
         });
         card.addEventListener('mouseleave', () => {
             if (card.classList.contains('highlighted')) card.style.transform = 'scale(1.04)';
-            else if (card.classList.contains('dimmed')) card.style.transform = 'scale(0.96)';
+            else if (card.classList.contains('dimmed')) card.style.transform = 'scale(0.98)';
             else card.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
         });
     });
