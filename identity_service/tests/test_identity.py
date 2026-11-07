@@ -163,7 +163,6 @@ def test_configured_owner_login_repairs_stale_password_hash(monkeypatch):
     monkeypatch.setenv("OWNER_PASSWORD", owner_password)
 
     # Simulate a stale password hash left behind by an earlier deployment.
-    db = next(iter([]), None)
     from app.db import SessionLocal
     db = SessionLocal()
     try:
