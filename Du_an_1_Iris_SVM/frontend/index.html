@@ -68,7 +68,8 @@
             <button class="tab-btn" role="tab" data-tab="science">📜 Câu chuyện</button>
             <button class="tab-btn" role="tab" data-tab="svm">🧠 SVM</button>
             <button class="tab-btn" role="tab" data-tab="history">📋 Lịch sử</button>
-            <button class="tab-btn" role="tab" data-tab="about">👤 Giới thiệu</button>
+            <button class="tab-btn" role="tab" data-tab="profile" id="tab-btn-profile">👤 Hồ sơ</button>
+            <button class="tab-btn" role="tab" data-tab="about">ℹ️ Giới thiệu</button>
             <button class="tab-btn" role="tab" data-tab="admin" id="tab-btn-admin" style="display: none;">👑 Quản trị</button>
         </nav>
 
@@ -601,6 +602,90 @@
                             <tbody id="hist-body"></tbody>
                         </table>
                         <p class="hist-empty" id="hist-empty">Chưa có dự đoán nào. Hãy thử ngay ở tab "Phân tích"!</p>
+                    </div>
+                </div>
+            </section>
+
+                        <!-- ── TAB: HỒ SƠ CÁ NHÂN & TÀI KHOẢN ── -->
+            <section class="tab-panel" id="panel-profile" role="tabpanel" hidden>
+                <div class="profile-container">
+                    <div class="glass-panel profile-card">
+                        <div class="profile-header-banner"></div>
+                        <div class="profile-header-content">
+                            <div class="profile-avatar-circle" id="profile-avatar-char">
+                                👤
+                            </div>
+                            <div class="profile-header-text">
+                                <div class="profile-badge-row">
+                                    <span class="profile-status-pill">🟢 Đang hoạt động</span>
+                                    <span class="profile-role-pill" id="profile-role-badge">Người dùng</span>
+                                </div>
+                                <h2 class="profile-email-title" id="profile-email-display">user@example.com</h2>
+                                <p class="profile-subtitle">Tài khoản xác thực tập trung qua Identity Provider (SSO)</p>
+                            </div>
+                        </div>
+
+                        <!-- Grid thông tin chi tiết -->
+                        <div class="profile-grid">
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">📧</span>
+                                <div>
+                                    <span class="profile-item-label">Email tài khoản</span>
+                                    <strong class="profile-item-val" id="profile-info-email">user@example.com</strong>
+                                </div>
+                            </div>
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">🆔</span>
+                                <div>
+                                    <span class="profile-item-label">Mã User ID</span>
+                                    <strong class="profile-item-val" id="profile-info-id">#1</strong>
+                                </div>
+                            </div>
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">🛡️</span>
+                                <div>
+                                    <span class="profile-item-label">Phân quyền hệ thống</span>
+                                    <strong class="profile-item-val" id="profile-info-role">Người dùng tiêu chuẩn</strong>
+                                </div>
+                            </div>
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">🔑</span>
+                                <div>
+                                    <span class="profile-item-label">Dịch vụ xác thực (IdP)</span>
+                                    <strong class="profile-item-val">Centralized Identity Provider</strong>
+                                </div>
+                            </div>
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">📱</span>
+                                <div>
+                                    <span class="profile-item-label">Client ID phân quyền</span>
+                                    <strong class="profile-item-val">iris-svm-api</strong>
+                                </div>
+                            </div>
+                            <div class="profile-item glass-panel-sub">
+                                <span class="profile-item-icon">📊</span>
+                                <div>
+                                    <span class="profile-item-label">Số lượt dự đoán cá nhân</span>
+                                    <strong class="profile-item-val" id="profile-info-preds">0 lượt</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khu vực Sign Out đổi tài khoản -->
+                        <div class="profile-actions-box">
+                            <div class="profile-actions-info">
+                                <h3>🚪 Quản lý phiên làm việc</h3>
+                                <p>Đăng xuất khỏi tài khoản hiện tại để chuyển sang tài khoản khác hoặc tạo tài khoản mới.</p>
+                            </div>
+                            <button id="profile-signout-btn" class="profile-signout-btn ripple-btn" type="button">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                                <span>Sign out (Đổi tài khoản)</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>

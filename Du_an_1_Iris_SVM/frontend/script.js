@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isOwner) {
                 loadAdminData();
             }
+            updateProfileView();
         }
     }
 
@@ -252,12 +253,43 @@ document.addEventListener('DOMContentLoaded', () => {
         isOwner = false;
         const adminTabBtn = document.getElementById('tab-btn-admin');
         if (adminTabBtn) adminTabBtn.style.display = 'none';
+
+        // Đưa tab về lại tab Phân tích mặc định
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            const isPredict = b.dataset.tab === 'predict';
+            b.classList.toggle('active', isPredict);
+            b.setAttribute('aria-selected', isPredict ? 'true' : 'false');
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => {
+            const isPredict = p.id === 'panel-predict';
+            p.classList.toggle('active', isPredict);
+            p.hidden = !isPredict;
+        });
+
+        // Reset form đăng nhập / đăng ký về trạng thái ban đầu
+        const authUser = document.getElementById('auth-user');
+        const authPass = document.getElementById('auth-pass');
+        const authError = document.getElementById('auth-error');
+        if (authUser) authUser.value = '';
+        if (authPass) authPass.value = '';
+        if (authError) authError.hidden = true;
+
+        isLoginMode = true;
+        if (authTitle) authTitle.textContent = '👋 Chào mừng đến với Iris AI';
+        if (authSubmitBtn) authSubmitBtn.textContent = 'Đăng nhập';
+        if (authSwitchText) authSwitchText.textContent = 'Chưa có tài khoản?';
+        if (authSwitchBtn) authSwitchBtn.textContent = 'Đăng ký ngay';
+
         checkAuth();
     }
     window.triggerLogout = triggerLogout;
 
     if(logoutBtn) {
         logoutBtn.addEventListener('click', triggerLogout);
+    }
+    const profileSignoutBtn = document.getElementById('profile-signout-btn');
+    if (profileSignoutBtn) {
+        profileSignoutBtn.addEventListener('click', triggerLogout);
     }
 
     checkAuth();
@@ -344,6 +376,8 @@ function initTabs() {
                 loadHistoryFromDB();
             } else if (btn.dataset.tab === 'admin') {
                 loadAdminData();
+            } else if (btn.dataset.tab === 'profile') {
+                updateProfileView();
             }
         });
     });
@@ -1705,3 +1739,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ─── Profile Tab View Updater ───
+function updateProfileView() {
+    if (!authToken) return;
+    const email = currentUsername || 'user@example.com';
+    const emailDisplay = document.getElementById('profile-email-display');
+    const infoEmail = document.getElementById('profile-info-email');
+    const avatarChar = document.getElementById('profile-avatar-char');
+    const roleBadge = document.getElementById('profile-role-badge');
+    const infoRole = document.getElementById('profile-info-role');
+    const infoId = document.getElementById('profile-info-id');
+    const infoPreds = document.getElementById('profile-info-preds');
+
+    if (emailDisplay) emailDisplay.textContent = email;
+    if (infoEmail) infoEmail.textContent = email;
+
+    if (avatarChar) {
+        const firstChar = email.trim().charAt(0).toUpperCase();
+        avatarChar.textContent = firstChar || '👤';
+    }
+
+    const payload = parseJwtPayload(authToken);
+    const userId = payload?.sub || '1';
+    if (infoId) infoId.textContent = `#${userId}`;
+
+    if (isOwner) {
+        if (roleBadge) {
+            roleBadge.textContent = '👑 Chủ sở hữu';
+            roleBadge.classList.add('owner');
+        }
+        if (infoRole) infoRole.textContent = 'Chủ sở hữu hệ thống (Toàn quyền)';
+    } else {
+        if (roleBadge) {
+            roleBadge.textContent = '👤 Người dùng';
+            roleBadge.classList.remove('owner');
+        }
+        if (infoRole) infoRole.textContent = 'Người dùng tiêu chuẩn';
+    }
+
+    if (infoPreds) {
+        const count = Array.isArray(historyData) ? historyData.length : 0;
+        infoPreds.textContent = `${count} lượt`;
+    }
+}
