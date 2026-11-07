@@ -1,4 +1,5 @@
 import os
+import hmac
 import bcrypt
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -189,9 +190,38 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail=f"Unknown client_id '{payload.client_id}'",
         )
 
-    # 2. Validate user credentials
+    # 2. Validate user credentials.
+    # Self-heal the configured Owner account if the database contains an old
+    # password hash (or the row was lost during an ephemeral SQLite restart).
     normalized_email = payload.email.strip().lower()
+    owner_email = os.getenv("OWNER_EMAIL", "admin@ml-dl-ai.local").strip().lower()
+    configured_owner_password = os.getenv("OWNER_PASSWORD")
     user = db.query(User).filter(User.email == normalized_email).first()
+
+    is_configured_owner = (
+        normalized_email == owner_email
+        and bool(configured_owner_password)
+        and hmac.compare_digest(payload.password, configured_owner_password)
+    )
+
+    if is_configured_owner:
+        if user is None:
+            user = User(
+                email=owner_email,
+                password_hash=hash_password(configured_owner_password),
+                is_owner=True,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(user)
+        else:
+            # Re-sync stale hashes and restore the owner flag only when the
+            # submitted password exactly matches the Render secret.
+            if not verify_password(configured_owner_password, user.password_hash):
+                user.password_hash = hash_password(configured_owner_password)
+            user.is_owner = True
+        db.commit()
+        db.refresh(user)
+
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
