@@ -1,4 +1,4 @@
-﻿# Đồ Án 1 — Phân loại Hoa Iris bằng SVM Đa Nhân
+# Đồ Án 1 — Phân loại Hoa Iris bằng SVM Đa Nhân
 
 > **Học phần:** Học máy Nâng cao  
 > **Sinh viên:** Nguyễn Xuân Phúc — MSSV 3110524025 — Lớp 24CKDL  
@@ -9,13 +9,18 @@
 
 ## Giới thiệu
 
-Dự án xây dựng hệ thống phân loại ba loài hoa Iris (*Setosa, Versicolor, Virginica*) dùng thuật toán **Support Vector Machine (SVM)** với bốn loại nhân khác nhau. Ngoài chức năng phân loại cơ bản, hệ thống còn tích hợp:
+Dự án xây dựng hệ thống phân loại ba loài hoa Iris (*Setosa, Versicolor, Virginica*) dùng thuật toán **Support Vector Machine (SVM)** với bốn loại nhân khác nhau. Ngoài chức năng phân loại cơ bản, hệ thống còn tích hợp các tính năng học thuật nâng cao và cá nhân hóa độc đáo:
 
-- **Support Vectors Inspector** — xem tọa độ, trọng số siêu phẳng và số lượng vector hỗ trợ từng lớp.
-- **Live SVM Playground** — điều chỉnh C, γ, degree theo thời gian thực và nhận chẩn đoán Overfitting/Underfitting.
-- **Kernel Arena** — so sánh song song 4 kernel về độ chính xác CV, latency và decision boundary.
-- **Explainable AI (XAI)** — phân tích độ nhạy nhiễu để giải thích lý do mô hình đưa ra kết quả.
-- **Batch CSV** — phân loại hàng loạt mẫu từ file CSV, xuất kết quả Excel.
+- **Không gian 3D PCA (Xoay 360°)** — Phép chiếu giảm chiều 4D → 3D bảo toàn **99.48% phương sai**, trực quan hóa không gian đa chiều, mặt phân cách và các Support Vectors với camera xoay tự do.
+- **KKT & Lagrange Multipliers ($\alpha_i$) Inspector** — Phân tích bài toán đối ngẫu và phân loại Support Vectors thành *Free SV* ($0 < \alpha_i < C$) và *Bounded SV* ($\alpha_i = C$) theo định lý Karush-Kuhn-Tucker.
+- **Stress-Test & Outlier Attack Simulator** — Giả lập nhiễu Gauss và chèn điểm ngoại lai đối kháng để kiểm chứng và xếp hạng độ bền (Robustness Score) của 4 kernel.
+- **Interactive Botanical Anatomy** — Sơ đồ giải phẫu hoa Iris (SVG) tương tác thời gian thực với thanh trượt đo đạc Sepal/Petal.
+- **Phiếu Thẩm Định Dự Đoán (Official Audit Certificate)** — Xuất báo cáo kiểm định học thuật định dạng in ấn/PDF với mã băm toàn vẹn SHA-256 và chữ ký điện tử.
+- **Chế độ Guided Tour** — Thuyết minh đồ án tương tác dẫn dắt giảng viên/người xem qua từng góc nhìn thực nghiệm của sinh viên.
+- **Live SVM Playground** — Điều chỉnh C, γ, degree theo thời gian thực và nhận chẩn đoán Overfitting/Underfitting.
+- **Kernel Arena** — So sánh song song 4 kernel về độ chính xác CV, latency và decision boundary.
+- **Explainable AI (XAI)** — Phân tích độ nhạy nhiễu (Sensitivity Attribution) giải thích lý do đưa ra kết quả.
+- **Batch CSV & Database** — Phân loại hàng loạt mẫu từ file CSV, xuất kết quả Excel và lưu trữ CSDL.
 
 ---
 
@@ -148,7 +153,7 @@ Mở `http://localhost:3000`
 ## Kiểm thử
 
 ```bash
-# Backend Iris SVM (17 test cases)
+# Backend Iris SVM (20 test cases: Core SVM + SSO IdP + KKT / 3D PCA / Stress-Test)
 cd Du_an_1_Iris_SVM/backend
 python -m pytest tests -v
 

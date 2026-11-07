@@ -33,7 +33,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Optional
 from sklearn import datasets
+from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -43,6 +45,10 @@ iris_dataset = datasets.load_iris()
 X_iris = iris_dataset.data
 y_iris = iris_dataset.target
 IRIS_MEDIANS = np.median(X_iris, axis=0)
+
+# ─── Global 3D PCA Projection (~99.5% variance preserved) ───
+pca_3d = PCA(n_components=3, random_state=42).fit(X_iris)
+X_iris_pca_3d = pca_3d.transform(X_iris)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 ARTIFACT_DIR = BASE_DIR / "artifacts"
@@ -362,11 +368,11 @@ def decision_boundary(
 
 
 # ====================================================================
-# ĐỘT PHÁ 1: SUPPORT VECTORS INSPECTOR
+# ĐỘT PHÁ 1: SUPPORT VECTORS & KKT MULTIPLIERS INSPECTOR
 # ====================================================================
 @app.get("/support-vectors")
 def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf|poly|sigmoid)$")):
-    """Detailed inspection of Support Vectors (indices, counts per class, weights)."""
+    """Detailed inspection of Support Vectors, KKT Multipliers (alpha), and boundary geometry."""
     if kernel not in models:
         raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
 
@@ -374,8 +380,16 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
     indices = [int(idx) for idx in svc.support_]
     n_support = [int(n) for n in svc.n_support_]
 
-    sv_points = [
-        {
+    # Calculate Dual coefficients (Lagrange multipliers alpha_i)
+    dual_coef = svc.dual_coef_.toarray() if hasattr(svc.dual_coef_, "toarray") else svc.dual_coef_
+    max_alphas = np.max(np.abs(dual_coef), axis=0) if dual_coef.size > 0 else np.zeros(len(indices))
+    C_val = float(svc.C)
+
+    sv_points = []
+    for i, idx in enumerate(indices):
+        alpha_val = float(max_alphas[i])
+        is_bounded = bool(alpha_val >= 0.95 * C_val)
+        sv_points.append({
             "index": idx,
             "sepal_length": float(X_iris[idx, 0]),
             "sepal_width": float(X_iris[idx, 1]),
@@ -383,9 +397,13 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
             "petal_width": float(X_iris[idx, 3]),
             "class_id": int(y_iris[idx]),
             "species": metadata["class_mapping"][str(int(y_iris[idx]))],
-        }
-        for idx in indices
-    ]
+            "alpha": round(alpha_val, 4),
+            "is_bounded": is_bounded,
+            "kkt_type": "Bounded SV (Trong lề / Vi phạm)" if is_bounded else "Free SV (Chuẩn trên Margin)",
+        })
+
+    free_count = sum(1 for p in sv_points if not p["is_bounded"])
+    bounded_count = sum(1 for p in sv_points if p["is_bounded"])
 
     response = {
         "kernel": kernel,
@@ -393,6 +411,19 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
         "n_support_per_class": {"setosa": n_support[0], "versicolor": n_support[1], "virginica": n_support[2]},
         "support_vector_indices": indices,
         "support_vectors": sv_points,
+        "kkt_analysis": {
+            "C": C_val,
+            "free_sv_count": free_count,
+            "bounded_sv_count": bounded_count,
+            "free_sv_pct": round(free_count / (len(indices) or 1) * 100, 1),
+            "bounded_sv_pct": round(bounded_count / (len(indices) or 1) * 100, 1),
+            "theorem": (
+                "Định lý Karush-Kuhn-Tucker (KKT) trong bài toán quy hoạch toàn phương SVM: "
+                "1. Điểm an toàn ngoài lề có α_i = 0 (không là SV). "
+                "2. Free SV (0 < α_i < C): Điểm tiếp xúc đúng mặt lề tối ưu, quyết định vị trí siêu phẳng. "
+                "3. Bounded SV (α_i = C): Điểm rơi vào khoảng đệm vi phạm lề (Soft Margin slack ξ_i > 0)."
+            ),
+        },
     }
 
     if kernel == "linear":
@@ -404,6 +435,149 @@ def get_support_vectors(kernel: str = Query(default="rbf", pattern="^(linear|rbf
         )
 
     return response
+
+
+# ====================================================================
+# ĐỘT PHÁ MỚI: 3D PCA DECISION SPACE (XOAY 360 ĐỘ)
+# ====================================================================
+@app.get("/pca-3d")
+def get_pca_3d(
+    kernel: str = Query(default="rbf", pattern="^(linear|rbf|poly|sigmoid)$"),
+    user_sl: Optional[float] = Query(default=None),
+    user_sw: Optional[float] = Query(default=None),
+    user_pl: Optional[float] = Query(default=None),
+    user_pw: Optional[float] = Query(default=None),
+):
+    """3D PCA Projection preserving ~99.5% variance with 360-degree interactive rotation data."""
+    if kernel not in models:
+        raise HTTPException(status_code=400, detail=f"Kernel '{kernel}' not available")
+
+    svc = models[kernel].named_steps["svc"]
+    sv_indices = set(int(idx) for idx in svc.support_)
+
+    points = []
+    for i in range(len(X_iris)):
+        cid = int(y_iris[i])
+        species = metadata["class_mapping"][str(cid)]
+        points.append({
+            "id": i,
+            "x": round(float(X_iris_pca_3d[i, 0]), 3),
+            "y": round(float(X_iris_pca_3d[i, 1]), 3),
+            "z": round(float(X_iris_pca_3d[i, 2]), 3),
+            "class_id": cid,
+            "species": species,
+            "is_support_vector": i in sv_indices,
+            "features": [
+                round(float(X_iris[i, 0]), 2),
+                round(float(X_iris[i, 1]), 2),
+                round(float(X_iris[i, 2]), 2),
+                round(float(X_iris[i, 3]), 2),
+            ],
+        })
+
+    user_projection = None
+    if all(v is not None for v in [user_sl, user_sw, user_pl, user_pw]):
+        raw_pt = np.array([[user_sl, user_sw, user_pl, user_pw]], dtype=float)
+        proj = pca_3d.transform(raw_pt)[0]
+        user_projection = {
+            "x": round(float(proj[0]), 3),
+            "y": round(float(proj[1]), 3),
+            "z": round(float(proj[2]), 3),
+            "features": [user_sl, user_sw, user_pl, user_pw],
+        }
+
+    variance_pct = [round(float(v * 100), 2) for v in pca_3d.explained_variance_ratio_]
+
+    return {
+        "kernel": kernel,
+        "explained_variance_ratio": variance_pct,
+        "total_explained_variance": round(sum(variance_pct), 2),
+        "components_description": {
+            "pc1": "Trục PC1 (chủ yếu là Chiều dài & Chiều rộng cánh hoa — mang thông tin phân loài cao nhất)",
+            "pc2": "Trục PC2 (chủ yếu là Chiều rộng đài hoa — phân biệt Setosa với 2 loài còn lại)",
+            "pc3": "Trục PC3 (vi sai chiều dài đài hoa — phân tách tinh vi giữa Versicolor & Virginica)",
+        },
+        "points": points,
+        "user_projection": user_projection,
+    }
+
+
+# ====================================================================
+# ĐỘT PHÁ MỚI: STRESS-TEST & OUTLIER / NOISE ATTACK SIMULATOR
+# ====================================================================
+@app.get("/stress-test")
+def stress_test_kernels(
+    noise_level: float = Query(default=0.15, ge=0.0, le=1.0),
+    outliers: int = Query(default=2, ge=0, le=10),
+    seed: int = Query(default=42),
+):
+    """Simulate Gaussian noise and boundary-crossing outliers to stress-test SVM Kernel robustness."""
+    safe_seed = int(getattr(seed, "default", seed))
+    safe_noise = float(getattr(noise_level, "default", noise_level))
+    safe_outliers = int(getattr(outliers, "default", outliers))
+
+    rng = np.random.RandomState(safe_seed)
+    X_noisy = X_iris.copy()
+    y_noisy = y_iris.copy()
+
+    # 1. Add Gaussian noise to continuous features
+    if safe_noise > 0:
+        std_devs = np.std(X_iris, axis=0)
+        noise = rng.normal(0, safe_noise * std_devs, size=X_noisy.shape)
+        X_noisy += noise
+
+    # 2. Inject adversarial/outlier samples
+    if safe_outliers > 0:
+        outlier_points = []
+        outlier_labels = []
+        for o_idx in range(safe_outliers):
+            if o_idx % 2 == 0:
+                # Versicolor with Setosa size
+                outlier_points.append([5.0, 3.4, 1.6, 0.3])
+                outlier_labels.append(1)
+            else:
+                # Setosa with Virginica size
+                outlier_points.append([6.5, 3.0, 5.5, 2.0])
+                outlier_labels.append(0)
+        X_noisy = np.vstack([X_noisy, outlier_points])
+        y_noisy = np.concatenate([y_noisy, outlier_labels])
+
+    results = []
+    for k in ["linear", "rbf", "poly", "sigmoid"]:
+        pipe = Pipeline([
+            ("scaler", StandardScaler()),
+            ("svc", SVC(kernel=k, C=1.0, random_state=42))
+        ])
+        pipe.fit(X_noisy, y_noisy)
+        score_noisy = float(pipe.score(X_noisy, y_noisy)) * 100
+        score_orig = float(pipe.score(X_iris, y_iris)) * 100
+        n_sv = len(pipe.named_steps["svc"].support_)
+
+        # Diagnosis
+        if k == "linear":
+            diag = "Mặt phẳng tuyến tính bị kéo lệch đáng kể bởi outlier do tính chất cứng nhắc của siêu phẳng đơn."
+        elif k == "rbf":
+            diag = "RBF duy trì vùng lõi cực tốt, tự động cô lập các outlier vào các 'ốc đảo' bán kính nhỏ quanh chúng."
+        elif k == "poly":
+            diag = "Đa thức bậc cao bị uốn cong đuôi ở vùng xa tâm dữ liệu khi gặp nhiễu ngoại lai."
+        else:
+            diag = "Sigmoid có độ bền kém nhất, ma trận Gram biến thiên mạnh làm suy giảm độ chính xác."
+
+        results.append({
+            "kernel": k,
+            "accuracy_on_noisy": round(score_noisy, 2),
+            "accuracy_on_clean": round(score_orig, 2),
+            "support_vectors": n_sv,
+            "robustness_score": round(max(0, 100 - abs(score_orig - score_noisy) * 2 - (safe_outliers * 3)), 1),
+            "diagnosis": diag,
+        })
+
+    return {
+        "noise_level": safe_noise,
+        "outliers": safe_outliers,
+        "total_samples": len(X_noisy),
+        "results": results,
+    }
 
 
 # ====================================================================

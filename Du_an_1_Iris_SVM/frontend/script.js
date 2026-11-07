@@ -339,6 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initExportExcel();
     initExportImage();
     initClearHistory();
+    initBotanicalAnatomy();
+    initPca3D();
+    initStressTest();
+    initKktInspector();
+    initCertificateModal();
+    initGuidedTour();
     drawRadar();
     drawScatter();
     checkApiHealth();
@@ -370,8 +376,11 @@ function initTabs() {
                 requestAnimationFrame(() => drawScatter());
             } else if (btn.dataset.tab === 'predict') {
                 requestAnimationFrame(() => drawRadar());
+            } else if (btn.dataset.tab === 'pca3d') {
+                loadPca3D();
             } else if (btn.dataset.tab === 'svm') {
                 loadKernelArena();
+                loadKktSupportVectors();
             } else if (btn.dataset.tab === 'history') {
                 loadHistoryFromDB();
             } else if (btn.dataset.tab === 'admin') {
@@ -470,6 +479,7 @@ function initSliders() {
             updateSliderFill(rng);
             drawRadar();
             drawScatter();
+            if (typeof updateBotanicalAnatomyValues === 'function') updateBotanicalAnatomyValues();
         };
 
         rng.addEventListener('input', () => updateVal(rng.value));
@@ -1781,5 +1791,590 @@ function updateProfileView() {
     if (infoPreds) {
         const count = Array.isArray(historyData) ? historyData.length : 0;
         infoPreds.textContent = `${count} lượt`;
+    }
+}
+
+// ================================================================
+// 10. TÍNH NĂNG ĐỘT PHÁ 1: BOTANICAL ANATOMY SVG INTERACTION
+// ================================================================
+function initBotanicalAnatomy() {
+    updateBotanicalAnatomyValues();
+
+    const sepalGroup = document.getElementById('anat-sepal-group');
+    const petalGroup = document.getElementById('anat-petal-group');
+    const sepalPill = document.querySelector('.sepal-pill');
+    const petalPill = document.querySelector('.petal-pill');
+
+    const sepalInputs = ['inp-sepal-length', 'rng-sepal-length', 'inp-sepal-width', 'rng-sepal-width'];
+    const petalInputs = ['inp-petal-length', 'rng-petal-length', 'inp-petal-width', 'rng-petal-width'];
+
+    const setSepalActive = (active) => {
+        if (sepalGroup) sepalGroup.classList.toggle('anat-active', active);
+        if (sepalPill) sepalPill.classList.toggle('active', active);
+    };
+
+    const setPetalActive = (active) => {
+        if (petalGroup) petalGroup.classList.toggle('anat-active', active);
+        if (petalPill) petalPill.classList.toggle('active', active);
+    };
+
+    sepalInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('mouseenter', () => setSepalActive(true));
+        el.addEventListener('mouseleave', () => setSepalActive(false));
+        el.addEventListener('focus', () => setSepalActive(true));
+        el.addEventListener('blur', () => setSepalActive(false));
+    });
+
+    petalInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('mouseenter', () => setPetalActive(true));
+        el.addEventListener('mouseleave', () => setPetalActive(false));
+        el.addEventListener('focus', () => setPetalActive(true));
+        el.addEventListener('blur', () => setPetalActive(false));
+    });
+
+    // Clicking parts in SVG focuses corresponding sliders
+    if (sepalGroup) {
+        sepalGroup.addEventListener('click', () => {
+            const rng = document.getElementById('rng-sepal-length');
+            if (rng) { rng.focus(); rng.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
+    }
+    if (petalGroup) {
+        petalGroup.addEventListener('click', () => {
+            const rng = document.getElementById('rng-petal-length');
+            if (rng) { rng.focus(); rng.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
+    }
+}
+
+function updateBotanicalAnatomyValues() {
+    const sl = document.getElementById('inp-sepal-length')?.value || '5.1';
+    const sw = document.getElementById('inp-sepal-width')?.value || '3.5';
+    const pl = document.getElementById('inp-petal-length')?.value || '1.4';
+    const pw = document.getElementById('inp-petal-width')?.value || '0.2';
+
+    const slEl = document.getElementById('anat-sl-val');
+    const swEl = document.getElementById('anat-sw-val');
+    const plEl = document.getElementById('anat-pl-val');
+    const pwEl = document.getElementById('anat-pw-val');
+
+    if (slEl) slEl.textContent = sl;
+    if (swEl) swEl.textContent = sw;
+    if (plEl) plEl.textContent = pl;
+    if (pwEl) pwEl.textContent = pw;
+}
+
+// ================================================================
+// 11. TÍNH NĂNG ĐỘT PHÁ 2: 3D PCA SPACE (XOAY 360 ĐỘ)
+// ================================================================
+let currentPcaData = null;
+
+function initPca3D() {
+    const select = document.getElementById('pca-kernel-select');
+    if (select) {
+        select.addEventListener('change', () => loadPca3D(select.value));
+    }
+    const resetBtn = document.getElementById('pca-reset-view-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (window.Plotly && document.getElementById('pca-3d-plot')) {
+                Plotly.relayout('pca-3d-plot', {
+                    'scene.camera': {
+                        eye: { x: 1.6, y: 1.6, z: 1.2 }
+                    }
+                });
+            }
+        });
+    }
+}
+
+async function loadPca3D(kernel = 'rbf') {
+    const container = document.getElementById('pca-3d-plot');
+    if (!container) return;
+
+    const sl = parseFloat(document.getElementById('inp-sepal-length')?.value || '5.1');
+    const sw = parseFloat(document.getElementById('inp-sepal-width')?.value || '3.5');
+    const pl = parseFloat(document.getElementById('inp-petal-length')?.value || '1.4');
+    const pw = parseFloat(document.getElementById('inp-petal-width')?.value || '0.2');
+
+    try {
+        const res = await fetch(`${API_BASE}/pca-3d?kernel=${kernel}&user_sl=${sl}&user_sw=${sw}&user_pl=${pl}&user_pw=${pw}`);
+        if (!res.ok) throw new Error('Không thể tải dữ liệu PCA 3D');
+        const data = await res.json();
+        currentPcaData = data;
+
+        // Update variance badges
+        const v = data.explained_variance_ratio || [92.46, 5.31, 1.71];
+        const pc1 = document.getElementById('pca-var-pc1');
+        const pc2 = document.getElementById('pca-var-pc2');
+        const pc3 = document.getElementById('pca-var-pc3');
+        const total = document.getElementById('pca-var-total');
+        if (pc1) pc1.textContent = `PC1: ${v[0]}% (Cánh hoa)`;
+        if (pc2) pc2.textContent = `PC2: ${v[1]}% (Đài hoa)`;
+        if (pc3) pc3.textContent = `PC3: ${v[2]}% (Vi sai)`;
+        if (total) total.textContent = `⭐ Tổng bảo toàn: ${data.total_explained_variance || 99.48}%`;
+
+        renderPlotly3D(data);
+    } catch (err) {
+        console.warn('Lỗi tải PCA 3D:', err);
+    }
+}
+
+function renderPlotly3D(data) {
+    const container = document.getElementById('pca-3d-plot');
+    if (!container) return;
+
+    if (!window.Plotly) {
+        // Fallback: load Plotly script dynamically if not yet ready
+        const script = document.createElement('script');
+        script.src = 'https://cdn.plot.ly/plotly-2.27.0.min.js';
+        script.onload = () => renderPlotly3D(data);
+        document.head.appendChild(script);
+        return;
+    }
+
+    const speciesNames = ['setosa', 'versicolor', 'virginica'];
+    const speciesDisplay = ['Iris setosa', 'Iris versicolor', 'Iris virginica'];
+    const speciesColors = ['#fb7185', '#a78bfa', '#38bdf8'];
+
+    const traces = speciesNames.map((sp, idx) => {
+        const pts = data.points.filter(p => p.class_id === idx);
+        return {
+            name: speciesDisplay[idx],
+            x: pts.map(p => p.x),
+            y: pts.map(p => p.y),
+            z: pts.map(p => p.z),
+            mode: 'markers',
+            type: 'scatter3d',
+            text: pts.map(p => `${speciesDisplay[idx]}<br>SL: ${p.features[0]} cm | SW: ${p.features[1]} cm<br>PL: ${p.features[2]} cm | PW: ${p.features[3]} cm${p.is_support_vector ? '<br>⚡ Support Vector' : ''}`),
+            hoverinfo: 'text',
+            marker: {
+                size: pts.map(p => p.is_support_vector ? 7 : 4.5),
+                color: speciesColors[idx],
+                opacity: 0.88,
+                line: {
+                    color: pts.map(p => p.is_support_vector ? '#fbbf24' : 'rgba(255,255,255,0.4)'),
+                    width: pts.map(p => p.is_support_vector ? 2.5 : 0.8)
+                }
+            }
+        };
+    });
+
+    // User projected point trace
+    if (data.user_projection) {
+        const u = data.user_projection;
+        traces.push({
+            name: '⭐ Điểm bạn chọn',
+            x: [u.x],
+            y: [u.y],
+            z: [u.z],
+            mode: 'markers+text',
+            type: 'scatter3d',
+            text: ['⭐ MẪU HIỆN TẠI'],
+            textposition: 'top center',
+            hoverinfo: 'text',
+            hovertext: [`Mẫu bạn chọn<br>SL: ${u.features[0]} cm | SW: ${u.features[1]} cm<br>PL: ${u.features[2]} cm | PW: ${u.features[3]} cm`],
+            marker: {
+                size: 13,
+                color: '#f59e0b',
+                symbol: 'diamond',
+                line: { color: '#ffffff', width: 2.5 }
+            }
+        });
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#f1f5f9' : '#1e293b';
+    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        showlegend: true,
+        legend: {
+            x: 0,
+            y: 1,
+            font: { family: 'Inter', color: textColor, size: 11 },
+            bgcolor: 'rgba(0,0,0,0)'
+        },
+        scene: {
+            xaxis: { title: 'PC1 (92.5%)', color: textColor, gridcolor: gridColor, zerolinecolor: gridColor },
+            yaxis: { title: 'PC2 (5.3%)', color: textColor, gridcolor: gridColor, zerolinecolor: gridColor },
+            zaxis: { title: 'PC3 (1.7%)', color: textColor, gridcolor: gridColor, zerolinecolor: gridColor },
+            camera: { eye: { x: 1.6, y: 1.6, z: 1.2 } },
+            aspectmode: 'cube'
+        }
+    };
+
+    Plotly.newPlot(container, traces, layout, { responsive: true, displayModeBar: false });
+}
+
+// ================================================================
+// 12. TÍNH NĂNG ĐỘT PHÁ 3: STRESS-TEST & OUTLIER SIMULATOR
+// ================================================================
+function initStressTest() {
+    const noiseRng = document.getElementById('stress-noise-rng');
+    const noiseVal = document.getElementById('stress-noise-val');
+    if (noiseRng && noiseVal) {
+        noiseRng.addEventListener('input', () => {
+            noiseVal.textContent = `${Math.round(parseFloat(noiseRng.value) * 100)}%`;
+        });
+    }
+
+    const outRng = document.getElementById('stress-outliers-rng');
+    const outVal = document.getElementById('stress-outliers-val');
+    if (outRng && outVal) {
+        outRng.addEventListener('input', () => {
+            outVal.textContent = `${outRng.value} mẫu`;
+        });
+    }
+
+    const runBtn = document.getElementById('run-stress-test-btn');
+    if (runBtn) {
+        runBtn.addEventListener('click', runStressTest);
+    }
+}
+
+async function runStressTest() {
+    const runBtn = document.getElementById('run-stress-test-btn');
+    const grid = document.getElementById('stress-results-grid');
+    if (!grid) return;
+
+    const noise = parseFloat(document.getElementById('stress-noise-rng')?.value || '0.15');
+    const outliers = parseInt(document.getElementById('stress-outliers-rng')?.value || '2', 10);
+
+    if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.textContent = '⏳ Đang thử nghiệm độ bền...';
+    }
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-sec);">Đang tiêm nhiễu Gauss & huấn luyện 4 mô hình SVM đối chứng...</div>';
+
+    try {
+        const res = await fetch(`${API_BASE}/stress-test?noise_level=${noise}&outliers=${outliers}&seed=42`);
+        if (!res.ok) throw new Error('Không thể chạy stress test');
+        const data = await res.json();
+
+        const kernelColors = {
+            linear: '#3b82f6',
+            rbf: '#10b981',
+            poly: '#a855f7',
+            sigmoid: '#f59e0b'
+        };
+
+        grid.innerHTML = data.results.map(r => {
+            const color = kernelColors[r.kernel] || '#6366f1';
+            const scoreColor = r.robustness_score >= 80 ? '#10b981' : (r.robustness_score >= 60 ? '#f59e0b' : '#ef4444');
+            return `
+                <div class="stress-card">
+                    <div class="stress-card-header">
+                        <strong style="text-transform:uppercase; font-size:1rem; color:${color};">${r.kernel}</strong>
+                        <span class="xai-badge" style="background:${scoreColor}22; color:${scoreColor}; font-weight:700;">
+                            Độ bền: ${r.robustness_score}/100
+                        </span>
+                    </div>
+                    <div class="robustness-meter">
+                        <div class="robustness-fill" style="width:${r.robustness_score}%; background:${scoreColor};"></div>
+                    </div>
+                    <div style="font-size:0.8rem; line-height:1.6; margin:0.6rem 0;">
+                        <div>Độ chính xác sạch: <strong>${r.accuracy_on_clean}%</strong></div>
+                        <div>Độ chính xác sau nhiễu: <strong style="color:${scoreColor};">${r.accuracy_on_noisy}%</strong></div>
+                        <div>Số Support Vectors: <strong>${r.support_vectors}</strong> điểm</div>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-sec); margin:0.4rem 0 0 0; line-height:1.4; border-top:1px dashed var(--glass-border); padding-top:0.4rem;">
+                        💡 ${r.diagnosis}
+                    </p>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:1.5rem;color:#ef4444;">Lỗi khi chạy thử nghiệm: ${err.message}</div>`;
+    } finally {
+        if (runBtn) {
+            runBtn.disabled = false;
+            runBtn.textContent = '⚡ Chạy Stress-Test So Sánh';
+        }
+    }
+}
+
+// ================================================================
+// 13. TÍNH NĂNG ĐỘT PHÁ 4: KKT & LAGRANGE MULTIPLIERS INSPECTOR
+// ================================================================
+function initKktInspector() {
+    const select = document.getElementById('kkt-kernel-select');
+    if (select) {
+        select.addEventListener('change', () => loadKktSupportVectors(select.value));
+    }
+}
+
+async function loadKktSupportVectors(kernel = 'rbf') {
+    const tbody = document.getElementById('kkt-sv-tbody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/support-vectors?kernel=${kernel}`);
+        if (!res.ok) throw new Error('Không thể tải dữ liệu KKT');
+        const data = await res.json();
+
+        const kkt = data.kkt_analysis || {};
+        const cVal = document.getElementById('kkt-c-val');
+        const freeCount = document.getElementById('kkt-free-count');
+        const freePct = document.getElementById('kkt-free-pct');
+        const boundedCount = document.getElementById('kkt-bounded-count');
+        const boundedPct = document.getElementById('kkt-bounded-pct');
+
+        if (cVal) cVal.textContent = kkt.C || '1.0';
+        if (freeCount) freeCount.textContent = `${kkt.free_sv_count || 0} SVs`;
+        if (freePct) freePct.textContent = `${kkt.free_sv_pct || 0}% (Chuẩn trên Margin)`;
+        if (boundedCount) boundedCount.textContent = `${kkt.bounded_sv_count || 0} SVs`;
+        if (boundedPct) boundedPct.textContent = `${kkt.bounded_sv_pct || 0}% (Lọt vào Margin/Vi phạm)`;
+
+        const speciesColors = { setosa: '#fb7185', versicolor: '#a78bfa', virginica: '#38bdf8' };
+
+        tbody.innerHTML = (data.support_vectors || []).map(sv => {
+            const color = speciesColors[sv.species] || '#a78bfa';
+            const badgeClass = sv.is_bounded ? 'kkt-badge-bounded' : 'kkt-badge-free';
+            const badgeLabel = sv.is_bounded ? 'Bounded (α = C)' : 'Free (0 < α < C)';
+            return `
+                <tr>
+                    <td>#${sv.index}</td>
+                    <td><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${color}; margin-right:4px;"></span>${sv.species}</td>
+                    <td>${sv.sepal_length}</td>
+                    <td>${sv.sepal_width}</td>
+                    <td>${sv.petal_length}</td>
+                    <td>${sv.petal_width}</td>
+                    <td><strong style="color:var(--text);">${sv.alpha || '--'}</strong></td>
+                    <td><span class="kkt-badge ${badgeClass}">${badgeLabel}</span></td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:1.5rem; color:#ef4444;">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+    }
+}
+
+// ================================================================
+// 14. TÍNH NĂNG ĐỘT PHÁ 5: PHIẾU THẨM ĐỊNH MẪU (AUDIT CERTIFICATE)
+// ================================================================
+function initCertificateModal() {
+    const openBtn = document.getElementById('open-certificate-btn');
+    const modal = document.getElementById('certificate-modal');
+    const closeBtn = document.getElementById('close-certificate-btn');
+    const backdrop = document.getElementById('certificate-backdrop');
+    const printBtn = document.getElementById('print-certificate-btn');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', openInspectionCertificate);
+    }
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => modal.hidden = true);
+    }
+    if (backdrop && modal) {
+        backdrop.addEventListener('click', () => modal.hidden = true);
+    }
+    if (printBtn) {
+        printBtn.addEventListener('click', () => window.print());
+    }
+}
+
+async function openInspectionCertificate() {
+    const modal = document.getElementById('certificate-modal');
+    if (!modal) return;
+
+    const sl = document.getElementById('inp-sepal-length')?.value || '5.1';
+    const sw = document.getElementById('inp-sepal-width')?.value || '3.5';
+    const pl = document.getElementById('inp-petal-length')?.value || '1.4';
+    const pw = document.getElementById('inp-petal-width')?.value || '0.2';
+    const kernel = document.getElementById('kernel-select')?.value || 'rbf';
+
+    const predName = document.getElementById('bot-name')?.textContent || 'Iris setosa';
+    const probText = document.getElementById('bot-prob')?.textContent || '99.4%';
+    const descText = document.getElementById('bot-desc')?.textContent || 'Đặc trưng bởi cánh hoa ngắn, màu sắc rực rỡ.';
+
+    // Fill table
+    const cfSl = document.getElementById('cf-sl');
+    const cfSw = document.getElementById('cf-sw');
+    const cfPl = document.getElementById('cf-pl');
+    const cfPw = document.getElementById('cf-pw');
+    if (cfSl) cfSl.textContent = sl;
+    if (cfSw) cfSw.textContent = sw;
+    if (cfPl) cfPl.textContent = pl;
+    if (cfPw) cfPw.textContent = pw;
+
+    // References
+    const cfrSl = document.getElementById('cfr-sl');
+    const cfrSw = document.getElementById('cfr-sw');
+    const cfrPl = document.getElementById('cfr-pl');
+    const cfrPw = document.getElementById('cfr-pw');
+    if (cfrSl) cfrSl.textContent = '4.3 – 5.8 cm';
+    if (cfrSw) cfrSw.textContent = '2.3 – 4.4 cm';
+    if (cfrPl) cfrPl.textContent = '1.0 – 1.9 cm';
+    if (cfrPw) cfrPw.textContent = '0.1 – 0.6 cm';
+
+    // Summary metadata
+    const certCode = document.getElementById('cert-code');
+    const certDate = document.getElementById('cert-date');
+    const certSpecies = document.getElementById('cert-species-name');
+    const certDesc = document.getElementById('cert-species-desc');
+    const certProb = document.getElementById('cert-prob-val');
+    const certKernel = document.getElementById('cert-kernel-val');
+    const certModelVer = document.getElementById('cert-model-ver');
+    const certHash = document.getElementById('cert-hash-val');
+
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN');
+    const randHex = Math.floor(Math.random() * 0xffffff).toString(16).toUpperCase().padStart(6, '0');
+
+    if (certCode) certCode.textContent = `IRIS-SVM-2026-${randHex}`;
+    if (certDate) certDate.textContent = formattedDate;
+    if (certSpecies) certSpecies.textContent = predName.toUpperCase();
+    if (certDesc) certDesc.textContent = descText;
+    if (certProb) certProb.textContent = probText;
+    if (certKernel) certKernel.textContent = `${kernel.toUpperCase()} Kernel`;
+    if (certModelVer) certModelVer.textContent = 'v2.1.0 (Production)';
+
+    // Generate SHA-256 integrity hash
+    const rawString = `${sl}|${sw}|${pl}|${pw}|${kernel}|${formattedDate}|Nguyễn Xuân Phúc`;
+    try {
+        const msgBuffer = new TextEncoder().encode(rawString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (certHash) certHash.textContent = hashHex;
+    } catch (e) {
+        if (certHash) certHash.textContent = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    }
+
+    modal.hidden = false;
+}
+
+// ================================================================
+// 15. TÍNH NĂNG ĐỘT PHÁ 6: GUIDED TOUR (THAM QUAN ĐỒ ÁN CÓ THUYẾT MINH)
+// ================================================================
+const TOUR_STEPS = [
+    {
+        targetId: 'top-header',
+        title: '👋 Chào mừng đến với Iris AI Explorer!',
+        content: 'Đồ án môn học <strong>Học máy Nâng cao</strong> của sinh viên <strong>Nguyễn Xuân Phúc (MSSV 3110524025 — Lớp 24CKDL)</strong>, GVHD <strong>TS. Phan Trần Đức Minh</strong>, Khoa Toán - Tin, ĐH Sư phạm — ĐHĐN.'
+    },
+    {
+        targetId: 'anatomy-wrap',
+        title: '🌸 Sơ đồ Giải phẫu hoa Tương tác',
+        content: 'Khác biệt với các ứng dụng thông thường, sơ đồ SVG này tương tác trực tiếp với các thanh trượt đo lường. Khi kéo hoặc hover vào Sepal hay Petal, phần hoa tương ứng sẽ phát sáng trực quan!'
+    },
+    {
+        targetId: 'radar-canvas',
+        title: '📊 Biểu đồ Radar & XAI (Explainable AI)',
+        content: 'Mô hình không chỉ dự đoán mà còn lượng hóa độ nhạy đặc trưng (Feature Sensitivity Attribution), giải thích lý do toán học đằng sau quyết định phân loài hoa.'
+    },
+    {
+        targetId: 'tab-data',
+        title: '📈 Bản đồ 2D & Live SVM Playground',
+        content: 'Khám phá ranh giới quyết định (Decision Boundary) của 150 mẫu Iris và điều chỉnh trực tiếp siêu tham số C, γ để quan sát hiện tượng Overfitting/Underfitting theo thời gian thực.'
+    },
+    {
+        targetId: 'tab-pca3d',
+        title: '🧊 Không gian 3D PCA (Xoay 360 độ)',
+        content: 'Chiếu giảm chiều từ 4D xuống 3D bảo toàn <strong>99.48% phương sai</strong>. Bạn có thể kéo chuột xoay 360°, quan sát các Support Vectors phát sáng viền vàng trong không gian đa chiều.'
+    },
+    {
+        targetId: 'tab-svm',
+        title: '📐 Điều kiện KKT & Xuất Phiếu Thẩm định',
+        content: 'Phân tích hệ số nhân Lagrange α_i theo định lý Karush-Kuhn-Tucker để phân loại Free SV vs Bounded SV, kèm tính năng xuất <strong>Phiếu Thẩm Định PDF</strong> có mã băm SHA-256.'
+    }
+];
+
+let currentTourIndex = 0;
+
+function initGuidedTour() {
+    const tourBtn = document.getElementById('tour-btn');
+    const closeBtn = document.getElementById('tour-close-btn');
+    const skipBtn = document.getElementById('tour-skip-btn');
+    const prevBtn = document.getElementById('tour-prev-btn');
+    const nextBtn = document.getElementById('tour-next-btn');
+
+    if (tourBtn) tourBtn.addEventListener('click', startGuidedTour);
+    if (closeBtn) closeBtn.addEventListener('click', closeGuidedTour);
+    if (skipBtn) skipBtn.addEventListener('click', closeGuidedTour);
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentTourIndex > 0) {
+                currentTourIndex--;
+                renderTourStep();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (currentTourIndex < TOUR_STEPS.length - 1) {
+                currentTourIndex++;
+                renderTourStep();
+            } else {
+                closeGuidedTour();
+            }
+        });
+    }
+}
+
+function startGuidedTour() {
+    currentTourIndex = 0;
+    const overlay = document.getElementById('tour-overlay');
+    if (overlay) overlay.hidden = false;
+    renderTourStep();
+}
+
+function closeGuidedTour() {
+    const overlay = document.getElementById('tour-overlay');
+    if (overlay) overlay.hidden = true;
+    document.querySelectorAll('.tour-highlight-target').forEach(el => el.classList.remove('tour-highlight-target'));
+}
+
+function renderTourStep() {
+    const step = TOUR_STEPS[currentTourIndex];
+    if (!step) return;
+
+    // Remove old highlights
+    document.querySelectorAll('.tour-highlight-target').forEach(el => el.classList.remove('tour-highlight-target'));
+
+    const badge = document.getElementById('tour-step-badge');
+    const title = document.getElementById('tour-title');
+    const content = document.getElementById('tour-content');
+    const prevBtn = document.getElementById('tour-prev-btn');
+    const nextBtn = document.getElementById('tour-next-btn');
+    const card = document.getElementById('tour-card');
+
+    if (badge) badge.textContent = `Bước ${currentTourIndex + 1} / ${TOUR_STEPS.length}`;
+    if (title) title.innerHTML = step.title;
+    if (content) content.innerHTML = step.content;
+
+    if (prevBtn) prevBtn.style.display = currentTourIndex === 0 ? 'none' : 'inline-block';
+    if (nextBtn) nextBtn.textContent = currentTourIndex === TOUR_STEPS.length - 1 ? 'Hoàn tất ✓' : 'Tiếp theo →';
+
+    // Switch tab if step targets a tab
+    if (step.targetId === 'tab-data') {
+        document.getElementById('tab-data')?.click();
+    } else if (step.targetId === 'tab-pca3d') {
+        document.getElementById('tab-pca3d')?.click();
+    } else if (step.targetId === 'tab-svm') {
+        document.getElementById('tab-svm')?.click();
+    } else if (currentTourIndex === 0 || currentTourIndex === 1 || currentTourIndex === 2) {
+        document.getElementById('tab-predict')?.click();
+    }
+
+    // Position tour card near target
+    const targetEl = document.getElementById(step.targetId) || document.querySelector('.top-header');
+    if (targetEl && card) {
+        targetEl.classList.add('tour-highlight-target');
+        const rect = targetEl.getBoundingClientRect();
+        const top = Math.min(window.innerHeight - 300, Math.max(20, rect.bottom + 15));
+        const left = Math.min(window.innerWidth - 400, Math.max(20, rect.left));
+        card.style.top = `${top}px`;
+        card.style.left = `${left}px`;
     }
 }

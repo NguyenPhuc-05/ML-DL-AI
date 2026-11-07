@@ -9,6 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- Plotly.js (CDN) for 3D PCA visualization -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
+    <!-- jsPDF + html2canvas for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 </head>
 <body>
     <!-- Cursor Glow -->
@@ -55,6 +60,10 @@
                     <span class="status-dot"></span>
                     <span id="status-label">Kết nối...</span>
                 </div>
+                <!-- Tour button -->
+                <button class="icon-btn tour-btn" id="tour-btn" aria-label="Tham quan đồ án" title="🎓 Dạo quanh đồ án (Guided Tour)">
+                    <span>🎓</span>
+                </button>
                 <button class="icon-btn" id="theme-toggle" aria-label="Chuyển đổi sáng/tối" title="Chuyển đổi sáng/tối">
                     <span id="theme-icon">🌙</span>
                 </button>
@@ -63,13 +72,14 @@
 
         <!-- ===== TAB NAVIGATION ===== -->
         <nav class="tab-nav glass-panel" id="tab-nav" role="tablist">
-            <button class="tab-btn active" role="tab" data-tab="predict" aria-selected="true">🔬 Phân tích</button>
-            <button class="tab-btn" role="tab" data-tab="data">📈 Dữ liệu</button>
-            <button class="tab-btn" role="tab" data-tab="science">📜 Câu chuyện</button>
-            <button class="tab-btn" role="tab" data-tab="svm">🧠 SVM</button>
-            <button class="tab-btn" role="tab" data-tab="history">📋 Lịch sử</button>
+            <button class="tab-btn active" role="tab" data-tab="predict" aria-selected="true" id="tab-predict">🔬 Phân tích</button>
+            <button class="tab-btn" role="tab" data-tab="data" id="tab-data">📈 Dữ liệu</button>
+            <button class="tab-btn" role="tab" data-tab="pca3d" id="tab-pca3d">🧊 3D PCA</button>
+            <button class="tab-btn" role="tab" data-tab="science" id="tab-science">📜 Câu chuyện</button>
+            <button class="tab-btn" role="tab" data-tab="svm" id="tab-svm">🧠 SVM</button>
+            <button class="tab-btn" role="tab" data-tab="history" id="tab-history">📋 Lịch sử</button>
             <button class="tab-btn" role="tab" data-tab="profile" id="tab-btn-profile">👤 Hồ sơ</button>
-            <button class="tab-btn" role="tab" data-tab="about">ℹ️ Giới thiệu</button>
+            <button class="tab-btn" role="tab" data-tab="about" id="tab-about">ℹ️ Giới thiệu</button>
             <button class="tab-btn" role="tab" data-tab="admin" id="tab-btn-admin" style="display: none;">👑 Quản trị</button>
         </nav>
 
@@ -82,7 +92,53 @@
                     <!-- Left: Input Controls -->
                     <div class="glass-panel input-panel">
                         <h2 class="sec-title">🎛️ Thông số đo lường</h2>
-                        <p class="sec-desc">Kéo thanh trượt hoặc nhập số.</p>
+                        <p class="sec-desc">Kéo thanh trượt hoặc nhập số. <strong>Sơ đồ giải phẫu hoa</strong> sẽ tương tác sáng theo đặc trưng tương ứng!</p>
+
+                        <!-- ── BOTANICAL ANATOMY SVG (Interactive) ── -->
+                        <div class="anatomy-wrap" id="anatomy-wrap" title="Sơ đồ tương tác: Đài hoa (Sepal) đỡ dưới, Cánh hoa (Petal) vươn lên">
+                            <svg id="iris-anatomy-svg" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg" class="iris-anatomy-svg">
+                                <defs>
+                                    <linearGradient id="anat-sepal-grad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#34d399"/>
+                                        <stop offset="100%" stop-color="#059669"/>
+                                    </linearGradient>
+                                    <linearGradient id="anat-petal-grad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#c084fc"/>
+                                        <stop offset="100%" stop-color="#7c3aed"/>
+                                    </linearGradient>
+                                    <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feGaussianBlur stdDeviation="4" result="blur" />
+                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                    </filter>
+                                </defs>
+                                <!-- Thân cây -->
+                                <line x1="160" y1="195" x2="160" y2="135" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+                                <path d="M160 175 Q120 150 95 160" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                <path d="M160 175 Q200 150 225 160" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                <!-- 3 Đài hoa (Sepals) - Nằm phía ngoài đỡ hoa -->
+                                <g id="anat-sepal-group" class="anat-part-group">
+                                    <ellipse id="anat-sepal-1" cx="115" cy="100" rx="36" ry="16" fill="url(#anat-sepal-grad)" fill-opacity="0.8" stroke="#047857" stroke-width="1.8" transform="rotate(-38 115 100)"/>
+                                    <ellipse id="anat-sepal-2" cx="205" cy="100" rx="36" ry="16" fill="url(#anat-sepal-grad)" fill-opacity="0.8" stroke="#047857" stroke-width="1.8" transform="rotate(38 205 100)"/>
+                                    <ellipse id="anat-sepal-3" cx="160" cy="142" rx="36" ry="15" fill="url(#anat-sepal-grad)" fill-opacity="0.85" stroke="#047857" stroke-width="1.8"/>
+                                </g>
+                                <!-- 3 Cánh hoa (Petals) - Vươn lên trên -->
+                                <g id="anat-petal-group" class="anat-part-group">
+                                    <ellipse id="anat-petal-1" cx="120" cy="65" rx="26" ry="12" fill="url(#anat-petal-grad)" fill-opacity="0.9" stroke="#6d28d9" stroke-width="1.8" transform="rotate(-55 120 65)"/>
+                                    <ellipse id="anat-petal-2" cx="200" cy="65" rx="26" ry="12" fill="url(#anat-petal-grad)" fill-opacity="0.9" stroke="#6d28d9" stroke-width="1.8" transform="rotate(55 200 65)"/>
+                                    <ellipse id="anat-petal-3" cx="160" cy="45" rx="28" ry="12" fill="url(#anat-petal-grad)" fill-opacity="0.95" stroke="#6d28d9" stroke-width="1.8"/>
+                                </g>
+                                <!-- Nhụy tâm vàng -->
+                                <circle cx="160" cy="95" r="16" fill="#fde047" stroke="#d97706" stroke-width="2"/>
+                                <circle cx="160" cy="95" r="8" fill="#fbbf24"/>
+                                <!-- Nhãn chỉ dẫn -->
+                                <text x="18" y="115" fill="#059669" font-size="11" font-weight="700" font-family="Inter">🍃 Sepal (Đài)</text>
+                                <text x="215" y="42" fill="#7c3aed" font-size="11" font-weight="700" font-family="Inter">🌸 Petal (Cánh)</text>
+                            </svg>
+                            <div class="anatomy-status-bar" id="anatomy-status-bar">
+                                <span class="anat-pill sepal-pill">Sepal: <strong id="anat-sl-val">5.1</strong> x <strong id="anat-sw-val">3.5</strong> cm</span>
+                                <span class="anat-pill petal-pill">Petal: <strong id="anat-pl-val">1.4</strong> x <strong id="anat-pw-val">0.2</strong> cm</span>
+                            </div>
+                        </div>
 
                         <!-- Kernel Selector -->
                         <div class="kernel-selector">
@@ -196,6 +252,11 @@
                             </table>
                             <p id="bot-desc" class="bot-desc"></p>
                             <p id="bot-habitat" class="bot-habitat"></p>
+                            <div style="margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                                <button class="action-btn ripple-btn" id="open-certificate-btn" type="button" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; font-weight: 600;">
+                                    📜 Xuất Phiếu Thẩm Định Mẫu
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -306,6 +367,96 @@
                         <div class="info-card"><div class="info-num" data-count="4">0</div><div class="info-label">Đặc trưng</div></div>
                         <div class="info-card"><div class="info-num" data-count="3">0</div><div class="info-label">Loài hoa</div></div>
                         <div class="info-card"><div class="info-num" data-count="4">0</div><div class="info-label">Phiên bản SVM</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── TAB MỚI: 3D PCA DECISION SPACE ── -->
+            <section class="tab-panel" id="panel-pca3d" role="tabpanel" hidden>
+                <div class="glass-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem;">
+                        <div>
+                            <h2 class="sec-title" style="margin-bottom:0.2rem;">🧊 Không gian 3D PCA &amp; Khảo sát Siêu phẳng</h2>
+                            <p class="sec-desc" style="margin-bottom:0;">Chiếu 4 chiều đặc trưng về 3 thành phần chính (PCA-1, PCA-2, PCA-3), bảo toàn <strong>99.48% phương sai</strong>. Bạn có thể nhấn giữ chuột để xoay 360°, phóng to/thu nhỏ.</p>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                            <label for="pca-kernel-select" style="font-size:.8rem;color:var(--text-sec);font-weight:600;">Support Vectors Kernel:</label>
+                            <select id="pca-kernel-select" class="kernel-select" style="min-width:110px;">
+                                <option value="linear">Linear</option>
+                                <option value="rbf" selected>RBF</option>
+                                <option value="poly">Poly</option>
+                                <option value="sigmoid">Sigmoid</option>
+                            </select>
+                            <button id="pca-reset-view-btn" class="action-btn ripple-btn" style="font-size:0.78rem;padding:0.4rem 0.8rem;">🔄 Reset Góc nhìn</button>
+                        </div>
+                    </div>
+
+                    <!-- PCA Explained Variance Badges -->
+                    <div class="pca-variance-bar" id="pca-variance-bar">
+                        <span class="pca-badge" id="pca-var-pc1">PC1: 92.46% (Cánh hoa)</span>
+                        <span class="pca-badge" id="pca-var-pc2">PC2: 5.31% (Đài hoa)</span>
+                        <span class="pca-badge" id="pca-var-pc3">PC3: 1.71% (Vi sai)</span>
+                        <span class="pca-badge total-badge" id="pca-var-total">⭐ Tổng bảo toàn: 99.48%</span>
+                    </div>
+
+                    <!-- 3D Plotly Container -->
+                    <div class="pca-3d-wrap" style="position:relative; width:100%; min-height:480px; margin-top:0.8rem; border-radius:12px; overflow:hidden;">
+                        <div id="pca-3d-plot" style="width:100%; height:480px;"></div>
+                        <div id="pca-fallback-canvas-wrap" style="display:none; text-align:center; padding:2rem;">
+                            <canvas id="pca-fallback-canvas" width="700" height="420" style="background:#0f172a; border-radius:12px;"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="legend" style="margin-top:0.6rem;">
+                        <span class="legend-item"><span class="ldot" style="background:#fb7185"></span> Setosa</span>
+                        <span class="legend-item"><span class="ldot" style="background:#a78bfa"></span> Versicolor</span>
+                        <span class="legend-item"><span class="ldot" style="background:#38bdf8"></span> Virginica</span>
+                        <span class="legend-item"><span class="ldot-sv"></span> Support Vector (Viền sáng)</span>
+                        <span class="legend-item"><span style="color:#f59e0b;font-size:1.1rem;font-weight:bold;">★</span> Điểm mẫu hiện tại của bạn</span>
+                    </div>
+                </div>
+
+                <!-- ── STRESS-TEST & OUTLIER ATTACK SIMULATOR ── -->
+                <div class="glass-panel stress-test-panel" style="margin-top:1.2rem;">
+                    <div class="pg-header">
+                        <div>
+                            <h2 class="sec-title" style="margin-bottom:0.2rem;">🛡️ Thử thách Độ bền Kernel (Stress-Test &amp; Outlier Attack)</h2>
+                            <p class="sec-desc" style="margin-bottom:0;">Bơm nhiễu Gauss và chèn điểm ngoại lai đối kháng (Adversarial Outliers) để kiểm chứng khả năng chịu đựng của 4 loại Kernel SVM.</p>
+                        </div>
+                        <span class="xai-badge" style="background:rgba(239,68,68,0.2);color:#ef4444;">Đột phá Học thuật</span>
+                    </div>
+
+                    <div class="stress-controls-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin:1rem 0;">
+                        <div class="pg-control">
+                            <div class="pg-label-row">
+                                <label for="stress-noise-rng">Mức độ Nhiễu Gauss (σ):</label>
+                                <span class="pg-val" id="stress-noise-val">15%</span>
+                            </div>
+                            <input type="range" id="stress-noise-rng" class="ios-slider" min="0" max="0.5" step="0.05" value="0.15">
+                            <div class="slider-range"><span>0% (Sạch)</span><span>25%</span><span>50% (Rất nhiễu)</span></div>
+                        </div>
+
+                        <div class="pg-control">
+                            <div class="pg-label-row">
+                                <label for="stress-outliers-rng">Số lượng Outliers Đối kháng:</label>
+                                <span class="pg-val" id="stress-outliers-val">2 mẫu</span>
+                            </div>
+                            <input type="range" id="stress-outliers-rng" class="ios-slider" min="0" max="6" step="1" value="2">
+                            <div class="slider-range"><span>0</span><span>3</span><span>6 mẫu</span></div>
+                        </div>
+
+                        <div style="display:flex; align-items:flex-end;">
+                            <button id="run-stress-test-btn" class="action-btn ripple-btn" style="width:100%; height:44px; background:linear-gradient(135deg, #ef4444, #f97316); color:white; font-weight:700; border:none;">
+                                ⚡ Chạy Stress-Test So Sánh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stress Test Results Grid -->
+                    <div class="stress-results-grid" id="stress-results-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-top:1rem;">
+                        <div style="grid-column:1/-1; text-align:center; padding:1.5rem; color:var(--text-sec);">
+                            Nhấn nút "⚡ Chạy Stress-Test So Sánh" để xem so sánh khả năng kháng nhiễu...
+                        </div>
                     </div>
                 </div>
             </section>
@@ -547,6 +698,81 @@
                             <div class="arena-grid" id="arena-grid">
                                 <div class="arena-loading" style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-sec);">Đang tải dữ liệu đấu trường...</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 7: KKT & Lagrange Multipliers Inspector -->
+                    <div class="svm-step kkt-step" style="border-top:1px solid var(--glass-border);padding-top:1.5rem;margin-top:1.5rem;">
+                        <div class="svm-step-num">07</div>
+                        <div class="svm-step-body" style="width:100%;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
+                                <div>
+                                    <h3 style="margin-bottom:0.2rem;">📐 Điều kiện KKT &amp; Hệ số nhân Lagrange (&alpha;<sub>i</sub>) Inspector</h3>
+                                    <p style="margin:0;font-size:.82rem;color:var(--text-sec);">Đào sâu vào bài toán đối ngẫu (Dual Optimization Problem) &amp; Phân loại Support Vectors theo định lý Karush-Kuhn-Tucker.</p>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <label for="kkt-kernel-select" style="font-size:0.8rem; font-weight:600; color:var(--text-sec);">Kernel:</label>
+                                    <select id="kkt-kernel-select" class="kernel-select" style="min-width:100px;">
+                                        <option value="linear">Linear</option>
+                                        <option value="rbf" selected>RBF</option>
+                                        <option value="poly">Poly</option>
+                                        <option value="sigmoid">Sigmoid</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- KKT Theorem Box -->
+                            <div class="kkt-callout-box" style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:10px; padding:0.9rem; margin:0.8rem 0; font-size:0.82rem; line-height:1.6;">
+                                <strong style="color:#3b82f6;">📜 Cơ sở Toán học Karush-Kuhn-Tucker (KKT Complementary Slackness):</strong>
+                                <p style="margin:0.3rem 0 0 0;">Trong bài toán tối ưu hóa SVM có điều kiện lề mềm (Soft Margin), mỗi điểm dữ liệu có một hệ số nhân Lagrange &alpha;<sub>i</sub> thỏa mãn:</p>
+                                <ul style="margin:0.3rem 0; padding-left:1.2rem;">
+                                    <li><strong>&alpha;<sub>i</sub> = 0:</strong> Điểm nằm ngoài lề an toàn (không phải là Support Vector).</li>
+                                    <li><strong>0 &lt; &alpha;<sub>i</sub> &lt; C (Free Support Vector):</strong> Điểm nằm CHÍNH XÁC trên siêu phẳng lề (y<sub>i</sub> f(x<sub>i</sub>) = 1). Đây là các điểm neo quyết định vị trí siêu phẳng.</li>
+                                    <li><strong>&alpha;<sub>i</sub> = C (Bounded Support Vector):</strong> Điểm vi phạm lề hoặc rơi vào vùng đệm (Slack variable &xi;<sub>i</sub> &gt; 0).</li>
+                                </ul>
+                            </div>
+
+                            <!-- KKT Summary Stat Pills -->
+                            <div class="kkt-stats-row" id="kkt-stats-row" style="display:flex; gap:0.8rem; flex-wrap:wrap; margin-bottom:1rem;">
+                                <div class="kkt-stat-card" style="flex:1; min-width:140px; background:var(--glass-bg); padding:0.8rem; border-radius:10px; border:1px solid var(--glass-border); text-align:center;">
+                                    <span style="font-size:0.75rem; color:var(--text-sec);">Tham số phạt C</span>
+                                    <h4 id="kkt-c-val" style="margin:0.2rem 0; font-size:1.2rem; color:var(--text);">1.0</h4>
+                                    <span style="font-size:0.7rem; color:var(--text-sec);">Soft Margin Limit</span>
+                                </div>
+                                <div class="kkt-stat-card" style="flex:1; min-width:140px; background:rgba(16,185,129,0.08); padding:0.8rem; border-radius:10px; border:1px solid rgba(16,185,129,0.25); text-align:center;">
+                                    <span style="font-size:0.75rem; color:#10b981; font-weight:600;">Free Support Vectors</span>
+                                    <h4 id="kkt-free-count" style="margin:0.2rem 0; font-size:1.2rem; color:#10b981;">18 SVs</h4>
+                                    <span id="kkt-free-pct" style="font-size:0.7rem; color:#10b981;">35.3% (Chuẩn trên Margin)</span>
+                                </div>
+                                <div class="kkt-stat-card" style="flex:1; min-width:140px; background:rgba(245,158,11,0.08); padding:0.8rem; border-radius:10px; border:1px solid rgba(245,158,11,0.25); text-align:center;">
+                                    <span style="font-size:0.75rem; color:#f59e0b; font-weight:600;">Bounded Support Vectors</span>
+                                    <h4 id="kkt-bounded-count" style="margin:0.2rem 0; font-size:1.2rem; color:#f59e0b;">33 SVs</h4>
+                                    <span id="kkt-bounded-pct" style="font-size:0.7rem; color:#f59e0b;">64.7% (Lọt vào Margin/Vi phạm)</span>
+                                </div>
+                            </div>
+
+                            <!-- Support Vectors Table with Alpha -->
+                            <div class="hist-table-wrap" style="max-height:280px; overflow-y:auto;">
+                                <table class="hist-table" id="kkt-sv-table">
+                                    <thead>
+                                        <tr>
+                                            <th># Sample ID</th>
+                                            <th>Loài</th>
+                                            <th>SL</th>
+                                            <th>SW</th>
+                                            <th>PL</th>
+                                            <th>PW</th>
+                                            <th>Hệ số &alpha;<sub>i</sub></th>
+                                            <th>Phân loại KKT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kkt-sv-tbody">
+                                        <tr><td colspan="8" style="text-align:center; padding:1.5rem; color:var(--text-sec);">Đang tải dữ liệu KKT Support Vectors...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                         </div>
                     </div>
                 </div>
@@ -868,6 +1094,135 @@
             </form>
             <div class="auth-switch">
                 <span id="auth-switch-text">Chưa có tài khoản?</span> <span id="auth-switch-btn" class="browse-link" style="cursor:pointer;font-weight:bold;">Đăng ký ngay</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: PHIẾU THẨM ĐỊNH PHÂN LOẠI MẪU HOA (OFFICIAL AUDIT REPORT) ── -->
+    <div id="certificate-modal" class="certificate-modal" hidden>
+        <div class="certificate-backdrop" id="certificate-backdrop"></div>
+        <div class="certificate-container" id="printable-certificate">
+            <div class="cert-watermark">ĐH SƯ PHẠM ĐÀ NẴNG</div>
+            <div class="cert-header">
+                <div class="cert-uni-text">
+                    <h4>BỘ GIÁO DỤC VÀ ĐÀO TẠO — ĐẠI HỌC ĐÀ NẴNG</h4>
+                    <h3>TRƯỜNG ĐẠI HỌC SƯ PHẠM • KHOA TOÁN - TIN</h3>
+                    <p>HỌC PHẦN: HỌC MÁY NÂNG CAO (ADVANCED MACHINE LEARNING) • GVHD: TS. PHAN TRẦN ĐỨC MINH</p>
+                </div>
+                <div class="cert-stamp">
+                    <span>SVM AUDIT</span>
+                    <strong>VERIFIED</strong>
+                </div>
+            </div>
+
+            <hr class="cert-divider">
+
+            <div class="cert-title-block">
+                <h2>PHIẾU THẨM ĐỊNH PHÂN LOẠI MẪU HOA IRIS</h2>
+                <p class="cert-subtitle">HỆ THỐNG XÁC THỰC MÔ HÌNH HỌC MÁY SUPPORT VECTOR MACHINE</p>
+                <div class="cert-meta-row">
+                    <span>Mã chứng nhận: <strong id="cert-code">IRIS-SVM-2026-X892</strong></span>
+                    <span>Thời gian kiểm định: <strong id="cert-date">--/--/2026 --:--</strong></span>
+                </div>
+            </div>
+
+            <div class="cert-body">
+                <div class="cert-section">
+                    <h3>1. THÔNG SỐ ĐO ĐẠC HÌNH THÁI MẪU (BOTANICAL FEATURES)</h3>
+                    <table class="cert-table">
+                        <thead>
+                            <tr>
+                                <th>Đặc trưng đo lường</th>
+                                <th>Giá trị đo</th>
+                                <th>Đơn vị</th>
+                                <th>Dải sinh học loài dự đoán</th>
+                                <th>Đánh giá tương thích</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cert-features-tbody">
+                            <tr><td>Chiều dài đài hoa (Sepal Length)</td><td id="cf-sl">--</td><td>cm</td><td id="cfr-sl">--</td><td>Khớp dải đặc trưng</td></tr>
+                            <tr><td>Chiều rộng đài hoa (Sepal Width)</td><td id="cf-sw">--</td><td>cm</td><td id="cfr-sw">--</td><td>Khớp dải đặc trưng</td></tr>
+                            <tr><td>Chiều dài cánh hoa (Petal Length)</td><td id="cf-pl">--</td><td>cm</td><td id="cfr-pl">--</td><td>Trọng số quyết định cao</td></tr>
+                            <tr><td>Chiều rộng cánh hoa (Petal Width)</td><td id="cf-pw">--</td><td>cm</td><td id="cfr-pw">--</td><td>Trọng số quyết định cao</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="cert-section" style="margin-top:1rem;">
+                    <h3>2. KẾT QUẢ PHÂN LOẠI &amp; THÔNG SỐ THUẬT TOÁN SVM</h3>
+                    <div class="cert-result-box">
+                        <div class="cert-res-main">
+                            <span>KẾT LUẬN LOÀI:</span>
+                            <h1 id="cert-species-name">IRIS SETOSA</h1>
+                            <p id="cert-species-desc">Đặc trưng bởi cánh hoa ngắn, thuộc chi Iris họ Iridaceae.</p>
+                        </div>
+                        <div class="cert-res-meta">
+                            <div class="res-meta-item"><span>Độ tin cậy:</span><strong id="cert-prob-val">99.4%</strong></div>
+                            <div class="res-meta-item"><span>Hàm nhân (Kernel):</span><strong id="cert-kernel-val">RBF (Gaussian)</strong></div>
+                            <div class="res-meta-item"><span>Phiên bản Model:</span><strong id="cert-model-ver">v2.1.0</strong></div>
+                            <div class="res-meta-item"><span>KKT Support Vectors:</span><strong id="cert-kkt-status">51 SVs (18 Free, 33 Bounded)</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cert-section" style="margin-top:1rem;">
+                    <h3>3. GIẢI THÍCH MÔ HÌNH XAI (FEATURE SENSITIVITY ATTRIBUTION)</h3>
+                    <p id="cert-xai-explanation" style="font-size:0.85rem; line-height:1.5; color:#334155; margin-bottom:0.5rem;">
+                        Mô hình SVM đưa ra quyết định dựa trên hàm khoảng cách tới siêu phẳng lề tối đa.
+                    </p>
+                </div>
+
+                <div class="cert-hash-box">
+                    <span style="font-size:0.75rem; color:#64748b; font-family:monospace;">SHA-256 DIGITAL INTEGRITY HASH:</span>
+                    <code id="cert-hash-val">a8f903b4e78291c90184b2e1739c9f2847d018471283eac71829371982736412</code>
+                </div>
+
+                <div class="cert-signatures">
+                    <div class="sig-col">
+                        <p>SINH VIÊN THỰC HIỆN ĐỒ ÁN</p>
+                        <div class="sig-space"><span class="sig-handwritten">Nguyễn Xuân Phúc</span></div>
+                        <strong>Nguyễn Xuân Phúc</strong>
+                        <span>MSSV: 3110524025 • Lớp 24CKDL</span>
+                    </div>
+                    <div class="sig-col">
+                        <p>HỆ THỐNG XÁC THỰC TỰ ĐỘNG</p>
+                        <div class="sig-space"><span class="sig-stamp-mark">✓ ELECTRONICALLY VERIFIED</span></div>
+                        <strong>Iris AI Explorer Engine</strong>
+                        <span>Identity &amp; SVM Validation Node</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cert-actions-bar no-print">
+                <button class="action-btn ripple-btn" id="print-certificate-btn" type="button" style="background:#059669; color:white; font-weight:700;">
+                    🖨️ In Phiếu / Xuất PDF
+                </button>
+                <button class="action-btn ripple-btn" id="close-certificate-btn" type="button" style="background:#e2e8f0; color:#334155;">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── GUIDED TOUR OVERLAY ── -->
+    <div id="tour-overlay" class="tour-overlay" hidden>
+        <div class="tour-backdrop"></div>
+        <div class="tour-spotlight" id="tour-spotlight"></div>
+        <div class="tour-card glass-panel" id="tour-card">
+            <div class="tour-header">
+                <span class="tour-badge" id="tour-step-badge">Bước 1 / 6</span>
+                <button class="tour-close-btn" id="tour-close-btn" aria-label="Đóng tour">✕</button>
+            </div>
+            <h3 class="tour-title" id="tour-title">Chào mừng đến với Iris AI Explorer!</h3>
+            <div class="tour-content" id="tour-content">
+                Đồ án Học máy Nâng cao của sinh viên Nguyễn Xuân Phúc (24CKDL).
+            </div>
+            <div class="tour-footer">
+                <button class="tour-btn tour-btn-sec" id="tour-skip-btn">Bỏ qua</button>
+                <div style="display:flex; gap:0.4rem;">
+                    <button class="tour-btn tour-btn-sec" id="tour-prev-btn" style="display:none;">Quay lại</button>
+                    <button class="tour-btn tour-btn-pri" id="tour-next-btn">Tiếp theo →</button>
+                </div>
             </div>
         </div>
     </div>

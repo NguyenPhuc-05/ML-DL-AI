@@ -401,3 +401,46 @@ def test_admin_predictions_forbidden_for_regular_user():
     res = client.get("/admin/predictions", headers={"Authorization": f"Bearer {regular_token}"})
     assert res.status_code == 403
     assert "chủ sở hữu" in res.json()["detail"].lower()
+
+
+# ==============================================================================
+# TESTS CHO TÍNH NĂNG ĐỘT PHÁ SÁNG TẠO MỚI (KKT, 3D PCA, STRESS TEST)
+# ==============================================================================
+
+def test_support_vectors_kkt_analysis():
+    res = client.get("/support-vectors?kernel=rbf")
+    assert res.status_code == 200
+    data = res.json()
+    assert "kkt_analysis" in data
+    kkt = data["kkt_analysis"]
+    assert kkt["free_sv_count"] + kkt["bounded_sv_count"] == data["total_support_vectors"]
+    assert len(data["support_vectors"]) > 0
+    first_sv = data["support_vectors"][0]
+    assert "alpha" in first_sv
+    assert "is_bounded" in first_sv
+    assert "kkt_type" in first_sv
+
+
+def test_pca_3d_endpoint():
+    res = client.get("/pca-3d?kernel=rbf&user_sl=5.1&user_sw=3.5&user_pl=1.4&user_pw=0.2")
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["points"]) == 150
+    assert data["total_explained_variance"] > 95.0
+    assert data["user_projection"] is not None
+    assert "x" in data["user_projection"]
+    assert "y" in data["user_projection"]
+    assert "z" in data["user_projection"]
+
+
+def test_stress_test_endpoint():
+    res = client.get("/stress-test?noise_level=0.2&outliers=2&seed=42")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["noise_level"] == 0.2
+    assert data["outliers"] == 2
+    assert len(data["results"]) == 4
+    for r in data["results"]:
+        assert "robustness_score" in r
+        assert "accuracy_on_noisy" in r
+        assert "diagnosis" in r
